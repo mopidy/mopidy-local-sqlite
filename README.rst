@@ -2,7 +2,11 @@ Mopidy-Local-SQLite
 ========================================================================
 
 Mopidy-Local-SQLite is a Mopidy_ local library extension that uses an
-SQLite database for keeping track of your local media.
+SQLite database for keeping track of your local media::
+
+    This software is still in planning/alpha stage, so there is no
+    working code here, yet.  Thanks for your interest, and please come
+    back in a couple of weeks...
 
 
 Installation

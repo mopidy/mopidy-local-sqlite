@@ -2,11 +2,10 @@ Mopidy-Local-SQLite
 ========================================================================
 
 Mopidy-Local-SQLite is a Mopidy_ local library extension that uses an
-SQLite database for keeping track of your local media::
+SQLite_ database for keeping track of your local media.
 
-    This software is still in planning/alpha stage, so there is no
-    working code here, yet.  Thanks for your interest, and please come
-    back in a couple of weeks...
+It lets you browse your music collection by artist and album, and
+notices updates via ``mopidy local scan`` without a server restart.
 
 
 Installation
@@ -27,8 +26,8 @@ to using Mopidy-Local-SQLite as your preferred local library::
     library = sqlite
 
 
-Once this has been set you can re-scan your library to populate the
-database::
+Once this has been set you need to re-scan your library to populate
+the database::
 
     mopidy local scan
 
@@ -57,7 +56,14 @@ Copyright (c) 2014 Thomas Kemmer.
 Licensed under the `Apache License, Version 2.0`_.
 
 
+Known Bugs and Limitations
+------------------------------------------------------------------------
+
+This extension does not support searching (yet).
+
+
 .. _Mopidy: http://www.mopidy.com/
+.. _SQLite: http://www.sqlite.org/
 
 .. _Issue Tracker: https://github.com/tkem/mopidy-local-sqlite/issues/
 .. _Source Code: https://github.com/tkem/mopidy-local-sqlite

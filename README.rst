@@ -61,6 +61,11 @@ Known Bugs and Limitations
 
 This extension does not support searching (yet).
 
+The current database schema does not support multiple artists, 
+composers or performers for a single track or album.  Look out
+for "Ignoring multiple artists" warnings during a local scan to
+see if you are affected by this.
+
 
 .. _Mopidy: http://www.mopidy.com/
 .. _SQLite: http://www.sqlite.org/

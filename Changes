@@ -1,5 +1,11 @@
 Revision history for Mopidy-Local-SQLite
 
+0.1.1   2014-08-14
+
+        - Browsing artists no longer returns composers and performers.
+
+        - Clean up artists/albums after import.
+
 0.1.0   2014-08-13
 
         - Initial release.

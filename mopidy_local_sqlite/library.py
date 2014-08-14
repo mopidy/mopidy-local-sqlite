@@ -7,14 +7,14 @@ import os
 
 from mopidy import local
 from mopidy.models import Ref, SearchResult
-from mopidy.utils import path
+from mopidy.utils import path  # FIXME: inofficial API
 
 from . import Extension
 from . import schema
 
 ROOT_URI = b'local:directory'
 
-ROOT_URIS = (
+ROOT_DIRECTORIES = (
     Ref.directory(uri=b'local:album', name='Albums'),
     Ref.directory(uri=b'local:artist', name='Artists'),
     Ref.directory(uri=b'local:track', name='Tracks')
@@ -71,8 +71,8 @@ class SQLiteLibrary(local.Library):
     _connection = None
 
     def __init__(self, config):
-        d = os.path.join(config['local']['data_dir'], b'sqlite')
-        self._dbpath = os.path.join(path.get_or_create_dir(d), b'library.db')
+        ldd = os.path.join(config['local']['data_dir'], b'sqlite')
+        self._dbpath = os.path.join(path.get_or_create_dir(ldd), b'library.db')
         self._config = config[Extension.ext_name]
 
     def _connect(self):
@@ -99,13 +99,13 @@ class SQLiteLibrary(local.Library):
     def load(self):
         with self._connect() as connection:
             version = schema.get_version(connection)
-            logger.debug('SQLite schema version: %s', version)
+            logger.debug('SQLite database v%s', version)
             if not version:
-                logger.info('Creating SQLite database schema')
+                logger.info('Creating SQLite database v%s', schema.VERSION)
                 self._executescript('create.sql')
                 return 0  # initially empty
             while version != schema.VERSION:
-                logger.info('Upgrading SQLite database schema v%s', version)
+                logger.info('Upgrading SQLite database v%s', version)
                 self._executescript('upgrade-v%s.sql' % version)
                 version = schema.version(connection)
             return schema.count_tracks(connection)
@@ -116,15 +116,15 @@ class SQLiteLibrary(local.Library):
     def browse(self, uri):
         # FIXME: sanitize!
         if uri == ROOT_URI:
-            return ROOT_URIS
+            return ROOT_DIRECTORIES
         elif uri == 'local:artist':
             return schema.browse_artists(self._connect())
         elif uri == 'local:album':
-            return schema.browse_albums(self._connect())
+            return schema.browse_album(self._connect())
         elif uri == 'local:track':
             return schema.browse_tracks(self._connect())
         elif uri.startswith('local:album:'):
-            return schema.browse_albums(self._connect(), uri)
+            return schema.browse_album(self._connect(), uri)
         elif uri.startswith('local:artist:'):
             return schema.browse_artists(self._connect(), uri)
         else:
@@ -132,7 +132,7 @@ class SQLiteLibrary(local.Library):
             return []
 
     def search(self, query=None, limit=100, offset=0, uris=None, exact=False):
-        logger.info('sqlite: search(%r, %r)', query, uris)
+        logger.debug('sqlite: search(%r, %r)', query, uris)
         return SearchResult(tracks=[])
 
     def begin(self):
@@ -140,34 +140,31 @@ class SQLiteLibrary(local.Library):
 
     def add(self, track):
         try:
-            track = validate_track(track)
+            schema.insert_track(self._connect(), validate_track(track))
         except ValueError as e:
             logger.warn('Skipped %s: %s.', track.uri, e)
-            return None
-        schema.insert_track(self._connect(), track)
 
     def remove(self, uri):
         schema.delete_track(self._connect(), uri)
 
-    def clear(self):
-        try:
-            schema.clear(self._connect())
-            return True
-        except sqlite3.Error as e:
-            logger.error('Error clearing SQLite database: %s', e)
-            return False
-
     def flush(self):
-        if self._connection:
-            try:
-                self._connection.commit()
-                return True
-            except sqlite3.Error as e:
-                logger.error('Error committing SQLite database: %s', e)
-        return False
+        if not self._connection:
+            return False
+        self._connection.commit()
+        return True
 
     def close(self):
-        # TODO: delete unused albums, artists
+        schema.cleanup(self._connection)
         self._connection.commit()
         self._connection.close()
         self._connection = None
+
+    def clear(self):
+        try:
+            with self._connect() as connection:
+                schema.clear(connection)
+                connection.execute('VACUUM')
+                return True
+        except sqlite3.Error as e:
+            logger.error('SQLite error: %s', e)
+            return False

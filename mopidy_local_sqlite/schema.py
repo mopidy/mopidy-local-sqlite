@@ -42,25 +42,6 @@ _TRACK_COLUMNS = (
     'last_modified'
     )
 
-# FIXME: multiple use of `:uri`?
-_BROWSE_ARTISTS_SQL = """
-SELECT 'directory', uri, name
-  FROM album
- WHERE artists = ?
-UNION
-SELECT 'track', uri, name
-  FROM track
- WHERE artists = ? AND album IS NULL
-ORDER BY name
-"""
-
-_BROWSE_ALBUMS_SQL = """
-SELECT 'track', uri, name
-  FROM track
- WHERE album = ?
- ORDER BY disc_no, track_no, name
-"""
-
 _INSERT_ARTIST_SQL = 'INSERT OR REPLACE INTO artist (%s) VALUES (%s)' % (
     ','.join(_ARTIST_COLUMNS),
     ','.join(':' + name for name in _ARTIST_COLUMNS)
@@ -75,12 +56,6 @@ _INSERT_TRACK_SQL = 'INSERT INTO track (%s) VALUES (%s)' % (
     ','.join(_TRACK_COLUMNS),
     ','.join(':' + name for name in _TRACK_COLUMNS)
 )
-
-_CLEAR_SQL = """
-DELETE FROM track;
-DELETE FROM album;
-DELETE FROM artist;
-"""
 
 _SELECT_TRACK_SQL = """
 SELECT %s, %s, %s, %s, %s, %s
@@ -207,24 +182,50 @@ def count_tracks(c):
 
 
 def browse_artists(c, uri=None):
-    refs = []
     if uri is None:
-        for uri, name in c.execute('SELECT uri, name FROM artist ORDER BY name'):  # noqa
-            refs.append(Ref.directory(uri=uri, name=name))
+        # FIXME: this is slow...
+        query = """
+        SELECT 'directory', uri, name
+          FROM artist
+         WHERE EXISTS (SELECT * FROM album WHERE album.artists = artist.uri)
+            OR EXISTS (SELECT * FROM track WHERE track.artists = artist.uri)
+         ORDER BY name
+        """
     else:
-        for type, uri, name in c.execute(_BROWSE_ARTISTS_SQL, [uri, uri]):
-            refs.append(Ref(type=type, uri=uri, name=name))
+        query = """
+        SELECT 'directory', uri, name
+          FROM album
+         WHERE artists = :uri
+         UNION
+        SELECT 'track', track.uri, track.name
+          FROM track
+          LEFT OUTER JOIN album ON track.album = album.uri
+         WHERE track.artists = :uri AND track.artists != album.artists
+         ORDER BY name
+        """
+    refs = []
+    for type, uri, name in c.execute(query,  dict(uri=uri)):
+        refs.append(Ref(type=type, uri=uri, name=name))
     return refs
 
 
-def browse_albums(c, uri=None):
-    refs = []
+def browse_album(c, uri=None):
     if uri is None:
-        for uri, name in c.execute('SELECT uri, name FROM album ORDER BY name'): # noqa
-            refs.append(Ref.directory(uri=uri, name=name))
+        query = """
+        SELECT 'directory', uri, name
+          FROM album
+         ORDER BY name
+        """
     else:
-        for type, uri, name in c.execute(_BROWSE_ALBUMS_SQL, [uri]):
-            refs.append(Ref(type=type, uri=uri, name=name))
+        query = """
+        SELECT 'track', uri, name
+          FROM track
+         WHERE album = :uri
+         ORDER BY disc_no, track_no, name
+        """
+    refs = []
+    for type, uri, name in c.execute(query,  dict(uri=uri)):
+        refs.append(Ref(type=type, uri=uri, name=name))
     return refs
 
 
@@ -255,8 +256,29 @@ def delete_track(c, uri):
     c.execute('DELETE FROM track WHERE uri = ?', (uri,))
 
 
+def cleanup(c):
+    c.executescript("""
+    DELETE FROM album WHERE NOT EXISTS (
+        SELECT rowid FROM track WHERE track.album = album.uri
+    );
+    DELETE FROM artist WHERE NOT EXISTS (
+        SELECT rowid FROM track WHERE track.artists = artist.uri
+         UNION
+        SELECT rowid FROM track WHERE track.composers = artist.uri
+         UNION
+        SELECT rowid FROM track WHERE track.performers = artist.uri
+         UNION
+        SELECT rowid FROM album WHERE album.artists = artist.uri
+    );
+    """)
+
+
 def clear(c):
-    c.executescript(_CLEAR_SQL)
+    c.executescript("""
+    DELETE FROM track;
+    DELETE FROM album;
+    DELETE FROM artist;
+    """)
 
 
 class Connection(sqlite3.Connection):

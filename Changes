@@ -1,5 +1,15 @@
 Revision history for Mopidy-Local-SQLite
 
+0.2.0   2014-08-20
+
+        - Support for indexed and full-text search.
+
+        - Support for local album images (Mopidy v0.20).
+
+        - Missing track names are generated from the track's URI.
+
+        - New configuration options for album/artist URI generation.
+
 0.1.1   2014-08-14
 
         - Browsing artists no longer returns composers and performers.

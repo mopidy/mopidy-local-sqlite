@@ -4,10 +4,13 @@ import hashlib
 import logging
 import os
 import re
+import shutil
 import sqlite3
 import urllib
+import urlparse
 
 from mopidy import local
+from mopidy.audio.scan import Scanner
 from mopidy.models import Ref, SearchResult
 
 from . import Extension, schema
@@ -51,9 +54,13 @@ class SQLiteLibrary(local.Library):
     _connection = None
 
     def __init__(self, config):
-        self._dir = _mkdir(config['local']['data_dir'], b'sqlite')
-        self._dbpath = os.path.join(self._dir, b'library.db')
+        data_dir = config['local']['data_dir']
         self._config = config[Extension.ext_name]
+        if self._config['extract_images']:
+            self._image_dir = os.path.join(data_dir, self._config['image_dir'])
+            self._media_dir = config['local']['media_dir']
+            self._scanner = Scanner(config['local']['scan_timeout'])
+        self._dbpath = os.path.join(_mkdir(data_dir, b'sqlite'), b'library.db')
 
     def load(self):
         with self._connect() as connection:
@@ -99,11 +106,21 @@ class SQLiteLibrary(local.Library):
         return schema.iter_tracks(self._connect())
 
     def add(self, track):
-        logger.debug('Adding track %r', track)
         try:
-            schema.insert_track(self._connect(), self._validate_track(track))
+            track = self._validate_track(track)
         except ValueError as e:
-            logger.warn('Skipped %s: %s.', track.uri, e)
+            logger.warn('Skipped %s: %s', track.uri, e)
+            return
+        if self._config['extract_images']:
+            album = track.album
+            # TBD: how to handle track w/o album?
+            if album and not album.images:
+                try:
+                    album = album.copy(images=self._extract_images(track))
+                except e:
+                    logger.warn('Extracting images from %s: %s', track.uri, e)
+            track = track.copy(album=album)
+        schema.insert_track(self._connect(), track)
 
     def remove(self, uri):
         schema.delete_track(self._connect(), uri)
@@ -116,18 +133,24 @@ class SQLiteLibrary(local.Library):
 
     def close(self):
         schema.cleanup(self._connection)
+        # TODO: delete unreferenced images?
         self._connection.commit()
         self._connection.close()
         self._connection = None
 
     def clear(self):
-        try:
-            with self._connect() as connection:
+        with self._connect() as connection:
+            try:
                 schema.clear(connection)
-                return True
-        except sqlite3.Error as e:
-            logger.error('SQLite error: %s', e)
-            return False
+            except sqlite3.Error as e:
+                logger.error('SQLite error: %s', e)
+                return False
+        if self._config['extract_images']:
+            # errors during image deletion are considered non-fatal
+            def onerror(fn, path, exc_info):
+                logger.warning('%s', exc_info[1])
+            shutil.rmtree(self._image_dir, onerror=onerror)
+        return True
 
     def _connect(self):
         if not self._connection:
@@ -185,3 +208,42 @@ class SQLiteLibrary(local.Library):
             composers=map(self._validate_artist, track.composers),
             performers=map(self._validate_artist, track.performers)
         )
+
+    def _extract_images(self, track):
+        import imghdr
+        # FIXME: internal Mopidy APIs
+        from mopidy.local import translator
+        from mopidy.utils import path
+
+        basedir = self._media_dir
+        relpath = translator.local_track_uri_to_path(track.uri, basedir)
+        fileuri = path.path_to_uri(os.path.join(basedir, relpath))
+        data = self._scanner.scan(fileuri)
+        tags = data['tags']
+
+        baseuri = self._config['image_base_uri']
+        images = []
+        for imgbuf in tags.get('image', []):
+            logger.debug('%s: found image, size=%s', track.uri, imgbuf.size)
+            if not imgbuf.data or not imgbuf.size:
+                logger.warn('Skipping empty image: %s', track.uri)
+                continue
+            filetype = imghdr.what(relpath, imgbuf.data)
+            if filetype:
+                ext = b'.' + filetype
+            elif self._config['default_image_extension']:
+                ext = self._config['default_image_extension']
+            else:
+                logger.warn('Skipping unknown image type: %s', track.uri)
+                continue
+            # TODO: use config['hash']
+            filename = hashlib.md5(imgbuf.data).hexdigest() + ext
+            filepath = os.path.join(self._image_dir, filename)
+            path.get_or_create_file(str(filepath), True, imgbuf.data)
+
+            if baseuri:
+                uri = urlparse.urljoin(baseuri, filename)
+            else:
+                uri = path.path_to_uri(filepath)
+            images.append(uri)
+        return images

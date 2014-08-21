@@ -9,6 +9,11 @@ FTS_ modules.  It also notices updates via ``mopidy local scan`` while
 Mopidy is running, so you can scan your media library periodically
 from a cron job, for example.
 
+This extension also features experimental support for extracting and
+using album art embedded in local media files.  At this point,
+however, this will be mostly of interest to developers, so it is
+disabled by default.
+
 
 Installation
 ------------------------------------------------------------------------
@@ -33,7 +38,7 @@ the database::
     mopidy local scan
 
 This extension also provides some configuration settings of its own,
-but beware that these are still subject to change::
+but beware that these are subject to change::
 
     [local-sqlite]
     enabled = true
@@ -54,6 +59,22 @@ but beware that these are still subject to change::
 
     # database connection timeout in seconds
     timeout = 10
+
+    # whether to extract images from local media files (experimental)
+    extract_images = false
+
+    # directory where extracted images are stored; if relative, names a
+    # subdirectory of local/data_dir
+    image_dir = images
+
+    # base URI for images; if blank, the local file URI will be used; if
+    # using the Mopidy-HTTP-Images extension for serving local images to
+    # Web clients, this should be set to "/images/"
+    image_base_uri =
+
+    # default extension for image files if the image type cannot be
+    # determined; leave blank to skip such images
+    default_image_extension =
 
 
 Project Resources

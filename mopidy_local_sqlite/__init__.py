@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 
 from mopidy import config, ext
 
-__version__ = '0.2.0'
+__version__ = '0.3.0'
 
 
 class Extension(ext.Extension):
@@ -23,6 +23,10 @@ class Extension(ext.Extension):
         schema['use_artist_mbid_uri'] = config.Boolean()
         schema['foreign_keys'] = config.Boolean()
         schema['timeout'] = config.Integer(optional=True, minimum=1)
+        schema['extract_images'] = config.Boolean()
+        schema['image_dir'] = config.String()
+        schema['image_base_uri'] = config.String(optional=True)
+        schema['default_image_extension'] = config.String(optional=True)
         return schema
 
     def setup(self, registry):

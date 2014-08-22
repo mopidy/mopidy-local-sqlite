@@ -133,7 +133,14 @@ class SQLiteLibrary(local.Library):
 
     def close(self):
         schema.cleanup(self._connection)
-        # TODO: delete unreferenced images?
+        if self._config['extract_images'] and os.path.isdir(self._image_dir):
+            images = frozenset(schema.iter_images(self._connection))
+            for root, _, filenames in os.walk(self._image_dir):
+                for filename in filenames:
+                    if self._image_uri(filename) not in images:
+                        filepath = os.path.join(root, filename)
+                        logger.info('Deleting file %s', filepath)
+                        os.remove(filepath)
         self._connection.commit()
         self._connection.close()
         self._connection = None
@@ -143,13 +150,14 @@ class SQLiteLibrary(local.Library):
             try:
                 schema.clear(connection)
             except sqlite3.Error as e:
-                logger.error('SQLite error: %s', e)
+                logger.error('Error clearing SQLite database: %s', e)
                 return False
-        if self._config['extract_images']:
-            # errors during image deletion are considered non-fatal
-            def onerror(fn, path, exc_info):
-                logger.warning('%s', exc_info[1])
-            shutil.rmtree(self._image_dir, onerror=onerror)
+        if self._config['extract_images'] and os.path.isdir(self._image_dir):
+            try:
+                shutil.rmtree(self._image_dir)
+            except OSError as e:
+                logger.error('Error clearing image directory: %s', e)
+                return False
         return True
 
     def _connect(self):
@@ -221,7 +229,6 @@ class SQLiteLibrary(local.Library):
         data = self._scanner.scan(fileuri)
         tags = data['tags']
 
-        baseuri = self._config['image_base_uri']
         images = []
         for imgbuf in tags.get('image', []):
             logger.debug('%s: found image, size=%s', track.uri, imgbuf.size)
@@ -234,16 +241,23 @@ class SQLiteLibrary(local.Library):
             elif self._config['default_image_extension']:
                 ext = self._config['default_image_extension']
             else:
-                logger.warn('Skipping unknown image type: %s', track.uri)
+                logger.warn('Skipping unknown image type for %s', track.uri)
                 continue
-            # TODO: use config['hash']
-            filename = hashlib.md5(imgbuf.data).hexdigest() + ext
+            hash = hashlib.new(self._config['hash'])
+            hash.update(imgbuf.data)
+            filename = hash.hexdigest() + ext
             filepath = os.path.join(self._image_dir, filename)
             path.get_or_create_file(str(filepath), True, imgbuf.data)
-
-            if baseuri:
-                uri = urlparse.urljoin(baseuri, filename)
-            else:
-                uri = path.path_to_uri(filepath)
-            images.append(uri)
+            images.append(self._image_uri(filename))
         return images
+
+    def _image_uri(self, filename):
+        from mopidy.utils import path
+
+        basedir = self._image_dir
+        baseuri = self._config['image_base_uri']
+
+        if baseuri:
+            return urlparse.urljoin(baseuri, filename)
+        else:
+            return path.path_to_uri(os.path.join(basedir, filename))

@@ -151,6 +151,12 @@ def iter_tracks(c):
     return itertools.imap(_track, c.execute('SELECT * FROM tracks'))
 
 
+def iter_images(c):
+    for row in c.execute('SELECT images FROM album WHERE images IS NOT NULL'):
+        for image in row[0].split():
+            yield image
+
+
 def get_track(c, uri):
     row = c.execute('SELECT * FROM tracks WHERE uri = ?', [uri]).fetchone()
     if row:

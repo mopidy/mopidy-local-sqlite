@@ -1,5 +1,9 @@
 Revision history for Mopidy-Local-SQLite
 
+0.3.2   2014-08-22
+
+        - Fixed exception handling when extracting images.
+
 0.3.1   2014-08-22
 
         - Delete unreferenced image files after local scan.

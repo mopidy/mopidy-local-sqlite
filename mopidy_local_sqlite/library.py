@@ -117,7 +117,7 @@ class SQLiteLibrary(local.Library):
             if album and not album.images:
                 try:
                     album = album.copy(images=self._extract_images(track))
-                except e:
+                except Exception as e:
                     logger.warn('Extracting images from %s: %s', track.uri, e)
             track = track.copy(album=album)
         schema.insert_track(self._connect(), track)

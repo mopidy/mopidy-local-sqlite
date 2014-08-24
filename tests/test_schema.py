@@ -102,9 +102,9 @@ class SchemaTest(unittest.TestCase):
                 []
             ),
             (
-                [self.tracks[1].uri],
+                [self.tracks[3].uri],
                 [('any', self.artists[0].name)],
-                [('album', self.albums[0].uri)],
+                [('album', self.albums[1].uri)],
             ),
             (
                 [self.tracks[2].uri],

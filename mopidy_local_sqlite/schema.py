@@ -33,6 +33,14 @@ SELECT *
  WHERE docid IN (SELECT docid FROM %s WHERE %s)
 """
 
+_SEARCH_URI_MAPPING = {
+    'album': 'album_uri = ?',
+    'artist': 'artist_uri = ?',
+    'composer': 'composer_uri = ?',
+    'performer': 'performer_uri = ?',
+    'albumartist': 'albumartist_uri = ?'
+}
+
 
 def _sqlstr(fmt, *args):
     return fmt % tuple(', '.join(['?'] * n) for n in args)
@@ -216,12 +224,21 @@ def browse_tracks(c):
     return map(_ref, c.execute(sql))
 
 
-def search_tracks(c, query, limit, offset, exact):
+def search_tracks(c, query, limit, offset, exact, uris=[]):
     if exact:
         sql, params = _build_search_query(query)
     else:
         sql, params = _build_fts_query(query)
-    logger.debug('SQL query: %s (%s)', sql, ','.join(params))
+    filters = []
+    for field, uri in uris:
+        try:
+            filters.append(_SEARCH_URI_MAPPING[field])
+        except KeyError:
+            raise LookupError('Invalid search URI field: %s' % field)
+        params.append(uri)
+    if filters:
+        sql = 'SELECT * FROM (%s) WHERE %s' % (sql, ' OR '.join(filters))
+    logger.debug('SQL query: %r, %r', sql, params)
     result = c.execute(sql + ' LIMIT ? OFFSET ?', params + [limit, offset])
     logger.debug('SQL query result: %r', result)
     return map(_track, result)

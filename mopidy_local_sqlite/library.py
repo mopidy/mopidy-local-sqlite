@@ -97,8 +97,15 @@ class SQLiteLibrary(local.Library):
                 q.append((field, values))
             else:
                 q.extend((field, value) for value in values)
-        # TODO: handle `uris`
-        tracks = schema.search_tracks(self._connect(), q, limit, offset, exact)
+        filters = []
+        for uri in uris or []:
+            type, id = _LOCAL_URI_RE.match(uri).groups()
+            if id and type != 'directory':
+                filters.append((type, uri))
+            else:
+                logger.debug('ignoring search URI %s', uri)
+        with self._connect() as c:
+            tracks = schema.search_tracks(c, q, limit, offset, exact, filters)
         # TODO: add local:search:<query>
         return SearchResult(uri='local:search', tracks=tracks)
 

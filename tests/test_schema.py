@@ -52,52 +52,90 @@ class SchemaTest(unittest.TestCase):
             self.assertEqual(track.name, result.name)
 
     def test_indexed_search(self):
-        query = [('track_name', self.tracks[0].name)]
-        result = schema.search_tracks(self.connection, query, 100, 0, True)
-        self.assertEqual(1, len(result))
-        self.assertEqual(self.tracks[0].uri, result[0].uri)
-
-        query = [('artist', next(iter(self.tracks[1].artists)).name)]
-        result = schema.search_tracks(self.connection, query, 100, 0, True)
-        self.assertEqual(1, len(result))
-        self.assertEqual(self.tracks[1].uri, result[0].uri)
-
-        query = [('album', self.tracks[2].album.name)]
-        result = schema.search_tracks(self.connection, query, 100, 0, True)
-        self.assertEqual(1, len(result))
-        self.assertEqual(self.tracks[2].uri, result[0].uri)
-
-        query = [('any', self.artists[0].name)]
-        result = schema.search_tracks(self.connection, query, 100, 0, True)
-        self.assertEqual(2, len(result))
-
-        query = [('track_name', 'track')]
-        result = schema.search_tracks(self.connection, query, 100, 0, True)
-        self.assertEqual(0, len(result))
+        for results, query, uris in [
+            (
+                [],
+                [('any', 'none')],
+                []
+            ),
+            (
+                [self.tracks[1].uri, self.tracks[3].uri],
+                [('any', self.artists[0].name)],
+                []
+            ),
+            (
+                [self.tracks[3].uri],
+                [('any', self.artists[0].name)],
+                [('album', self.albums[1].uri)],
+            ),
+            (
+                [self.tracks[2].uri],
+                [('album', self.tracks[2].album.name)],
+                [],
+            ),
+            (
+                [self.tracks[1].uri],
+                [('artist', next(iter(self.tracks[1].artists)).name)],
+                [],
+            ),
+            (
+                [self.tracks[0].uri],
+                [('track_name', self.tracks[0].name)],
+                []
+            ),
+        ]:
+            tracks = schema.search_tracks(
+                self.connection, query, 100, 0, True, uris
+            )
+            self.assertItemsEqual(results, map(lambda t: t.uri, tracks))
 
     def test_fulltext_search(self):
-        query = [('track_name', self.tracks[0].name)]
-        result = schema.search_tracks(self.connection, query, 100, 0, False)
-        self.assertEqual(1, len(result))
-        self.assertEqual(self.tracks[0].uri, result[0].uri)
-
-        query = [('artist', next(iter(self.tracks[1].artists)).name)]
-        result = schema.search_tracks(self.connection, query, 100, 0, False)
-        self.assertEqual(1, len(result))
-        self.assertEqual(self.tracks[1].uri, result[0].uri)
-
-        query = [('album', self.tracks[2].album.name)]
-        result = schema.search_tracks(self.connection, query, 100, 0, False)
-        self.assertEqual(1, len(result))
-        self.assertEqual(self.tracks[2].uri, result[0].uri)
-
-        query = [('any', self.artists[0].name)]
-        result = schema.search_tracks(self.connection, query, 100, 0, True)
-        self.assertEqual(2, len(result))
-
-        query = [('track_name', 'track')]
-        result = schema.search_tracks(self.connection, query, 100, 0, False)
-        self.assertEqual(len(self.tracks), len(result))
+        for results, query, uris in [
+            (
+                [],
+                [('any', 'none')],
+                []
+            ),
+            (
+                [self.tracks[1].uri, self.tracks[3].uri],
+                [('any', self.artists[0].name)],
+                []
+            ),
+            (
+                [self.tracks[1].uri],
+                [('any', self.artists[0].name)],
+                [('album', self.albums[0].uri)],
+            ),
+            (
+                [self.tracks[2].uri],
+                [('album', self.tracks[2].album.name)],
+                [],
+            ),
+            (
+                [self.tracks[1].uri],
+                [('artist', next(iter(self.tracks[1].artists)).name)],
+                [],
+            ),
+            (
+                [self.tracks[0].uri],
+                [('track_name', self.tracks[0].name)],
+                []
+            ),
+            (
+                map(lambda t: t.uri, self.tracks),
+                [('track_name', 'track')],
+                []
+            ),
+            (
+                [self.tracks[1].uri],
+                [('track_name', 'track')],
+                [('artist', self.artists[0].uri)]
+            ),
+        ]:
+            tracks = schema.search_tracks(
+                self.connection, query, 100, 0, False, uris
+            )
+            self.assertItemsEqual(results, map(lambda t: t.uri, tracks))
 
     def test_browse_artists(self):
         result = schema.browse_artists(self.connection)

@@ -16,7 +16,7 @@ class SchemaTest(unittest.TestCase):
     ]
     albums = [
         Album(uri='local:album:0', name='album #0'),
-        Album(uri='local:album:1', name='album #1', artists=[artists[0]]),
+        Album(uri='local:album:1', name='album #1', artists=[artists[0]])
     ]
     tracks = [
         Track(uri='local:track:0', name='track #0'),
@@ -32,7 +32,6 @@ class SchemaTest(unittest.TestCase):
         schema.load(self.connection)
         for track in self.tracks:
             schema.insert_track(self.connection, track)
-        schema.cleanup(self.connection)
 
     def tearDown(self):
         self.connection.close()
@@ -157,3 +156,25 @@ class SchemaTest(unittest.TestCase):
     def test_browse_tracks(self):
         result = schema.browse_tracks(self.connection)
         self.assertEqual(len(self.tracks), len(result))
+
+    def test_delete(self):
+        c = self.connection
+        schema.delete_track(c, self.tracks[0].uri)
+        schema.cleanup(c)
+        self.assertEqual(2, len(c.execute('SELECT * FROM album').fetchall()))
+        self.assertEqual(2, len(c.execute('SELECT * FROM artist').fetchall()))
+
+        schema.delete_track(c, self.tracks[1].uri)
+        schema.cleanup(c)
+        self.assertEqual(2, len(c.execute('SELECT * FROM album').fetchall()))
+        self.assertEqual(2, len(c.execute('SELECT * FROM artist').fetchall()))
+
+        schema.delete_track(c, self.tracks[2].uri)
+        schema.cleanup(c)
+        self.assertEqual(1, len(c.execute('SELECT * FROM album').fetchall()))
+        self.assertEqual(2, len(c.execute('SELECT * FROM artist').fetchall()))
+
+        schema.delete_track(c, self.tracks[3].uri)
+        schema.cleanup(c)
+        self.assertEqual(0, len(c.execute('SELECT * FROM album').fetchall()))
+        self.assertEqual(0, len(c.execute('SELECT * FROM artist').fetchall()))

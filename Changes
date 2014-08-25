@@ -1,5 +1,9 @@
 Revision history for Mopidy-Local-SQLite
 
+0.5.0   UNRELEASED
+
+        - Create `albums` view.
+
 0.4.0   2014-08-24
 
         - Add `uris` parameter to schema.search_tracks().

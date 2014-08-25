@@ -9,7 +9,7 @@ from mopidy.models import Artist, Album, Track, Ref
 
 logger = logging.getLogger(__name__)
 
-USER_VERSION = 2
+USER_VERSION = 3
 
 _SCRIPTS_DIR = os.path.join(os.path.dirname(__file__), b'scripts')
 
@@ -177,14 +177,14 @@ def browse_albums(c, uri=None):
     if uri is None:
         sql = """
         SELECT 'directory' AS type, uri, name
-          FROM album
+          FROM albums
          ORDER BY name
         """
     else:
         sql = """
         SELECT 'track' AS type, uri, name
-          FROM track
-         WHERE album = :uri
+          FROM tracks
+         WHERE album_uri = :uri
          ORDER BY disc_no, track_no, name
         """
     return map(_ref, c.execute(sql, {'uri': uri}))
@@ -194,22 +194,19 @@ def browse_artists(c, uri=None):
     if uri is None:
         sql = """
         SELECT 'directory' AS type, uri, name
-          FROM artist
-         WHERE EXISTS (SELECT * FROM album WHERE album.artists = artist.uri)
-            OR EXISTS (SELECT * FROM track WHERE track.artists = artist.uri)
+          FROM artists
          ORDER BY name
         """
     else:
         sql = """
         SELECT 'directory' AS type, uri, name
-          FROM album
-         WHERE artists = :uri
+          FROM albums
+         WHERE artist_uri = :uri
          UNION
-        SELECT 'track', track.uri, track.name
-          FROM track
-          LEFT OUTER JOIN album ON track.album = album.uri
-         WHERE track.artists = :uri
-           AND (album.artists IS NULL OR album.artists != :uri)
+        SELECT 'track' AS type, uri, name
+          FROM tracks
+         WHERE artist_uri = :uri
+           AND (albumartist_uri IS NULL OR albumartist_uri != :uri)
          ORDER BY type, name
         """
     return map(_ref, c.execute(sql, {'uri': uri}))
@@ -218,7 +215,7 @@ def browse_artists(c, uri=None):
 def browse_tracks(c):
     sql = """
     SELECT 'track' AS type, uri, name
-      FROM track
+      FROM tracks
      ORDER BY name
     """
     return map(_ref, c.execute(sql))

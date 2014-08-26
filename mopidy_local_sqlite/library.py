@@ -155,6 +155,7 @@ class SQLiteLibrary(local.Library):
                         filepath = os.path.join(root, filename)
                         logger.info('Deleting file %s', filepath)
                         os.remove(filepath)
+        self._connection.execute('ANALYZE')
         self._connection.commit()
         self._connection.close()
         self._connection = None

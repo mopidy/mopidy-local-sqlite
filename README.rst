@@ -3,11 +3,11 @@ Mopidy-Local-SQLite
 
 Mopidy-Local-SQLite is a Mopidy_ local library extension that uses an
 SQLite_ database for keeping track of your local media.  This
-extension lets you browse your music collection by artist and album,
-and provides efficient full-text search capabilities based on SQLite's
-FTS_ modules.  It also notices updates via ``mopidy local scan`` while
-Mopidy is running, so you can scan your media library periodically
-from a cron job, for example.
+extension lets you browse your music collection by album, artist,
+composer and performer, and provides full-text search capabilities
+based on SQLite's FTS_ modules.  It also notices updates via ``mopidy
+local scan`` while Mopidy is running, so you can scan your media
+library periodically from a cron job, for example.
 
 This extension also features experimental support for extracting and
 using album art embedded in local media files.  At this point,
@@ -38,12 +38,12 @@ the database::
     mopidy local scan
 
 This extension also provides some configuration settings of its own,
-but beware that these are subject to change::
+but beware that these are still subject to change::
 
     [local-sqlite]
     enabled = true
 
-    # hash algorithm to use for generating local URIs
+    # hash algorithm used for generating local URIs and image file names
     hash = md5
 
     # whether to use an album's musicbrainz_id for generating its URI
@@ -105,7 +105,7 @@ Known Bugs and Limitations
 ------------------------------------------------------------------------
 
 The database schema does not support multiple artists, composers or
-performers for a single track or album.  Look out for "Ignoring
+performers for a single track or album (yet).  Look out for "Ignoring
 multiple artists" warnings during a local scan to see if you are
 affected by this.
 

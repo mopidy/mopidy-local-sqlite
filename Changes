@@ -1,8 +1,12 @@
 Revision history for Mopidy-Local-SQLite
 
-0.5.0   UNRELEASED
+0.5.0   2014-08-26
 
-        - Create `albums` view.
+        - Create `albums`, `artists`, etc. views.
+
+        _ Support browsing by composer and performer.
+
+        - Perform ANALYZE after local scan.
 
 0.4.0   2014-08-24
 

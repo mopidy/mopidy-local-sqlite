@@ -212,6 +212,42 @@ def browse_artists(c, uri=None):
     return map(_ref, c.execute(sql, {'uri': uri}))
 
 
+def browse_composers(c, uri=None):
+    if uri is None:
+        # FIXME: uri scheme
+        sql = """
+        SELECT 'directory' AS type, 'local:composer:' || uri AS uri, name
+          FROM composers
+         ORDER BY name
+        """
+    else:
+        sql = """
+        SELECT 'track' AS type, uri, name
+          FROM tracks
+         WHERE composer_uri = :uri
+         ORDER BY name
+        """
+    return map(_ref, c.execute(sql, {'uri': uri}))
+
+
+def browse_performers(c, uri=None):
+    if uri is None:
+        # FIXME: uri scheme
+        sql = """
+        SELECT 'directory' AS type, 'local:performer:' || uri AS uri, name
+          FROM performers
+         ORDER BY name
+        """
+    else:
+        sql = """
+        SELECT 'track' AS type, uri, name
+          FROM tracks
+         WHERE performer_uri = :uri
+         ORDER BY name
+        """
+    return map(_ref, c.execute(sql, {'uri': uri}))
+
+
 def browse_tracks(c):
     sql = """
     SELECT 'track' AS type, uri, name

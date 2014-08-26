@@ -19,9 +19,12 @@ _LOCAL_URI_RE = re.compile(r'local:(\w+)(?::(.*))?\Z')
 
 _TRACK_URI_RE = re.compile(r'local:track:(.*/)?([^.]+)(\..*)?\Z')
 
+# FIXME: re-think URI scheme (local:composer:local:artist:...)
 _ROOT_DIRECTORIES = (
     Ref.directory(uri=b'local:album', name='Albums'),
     Ref.directory(uri=b'local:artist', name='Artists'),
+    Ref.directory(uri=b'local:composer', name='Composers'),
+    Ref.directory(uri=b'local:performer', name='Performers'),
     Ref.directory(uri=b'local:track', name='Tracks')
 )
 
@@ -84,6 +87,10 @@ class SQLiteLibrary(local.Library):
             return schema.browse_albums(self._connect(), uri if id else None)
         elif type == 'artist':
             return schema.browse_artists(self._connect(), uri if id else None)
+        elif type == 'composer':
+            return schema.browse_composers(self._connect(), id or None)
+        elif type == 'performer':
+            return schema.browse_performers(self._connect(), id or None)
         elif type == 'track' and id is None:
             return schema.browse_tracks(self._connect())
         else:

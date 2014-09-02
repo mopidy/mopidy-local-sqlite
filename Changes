@@ -1,5 +1,9 @@
 Revision history for Mopidy-Local-SQLite
 
+0.6.0   2014-09-02
+
+        - Add HTTP handler for accessing local images.
+
 0.5.0   2014-08-26
 
         - Create `albums`, `artists`, etc. views.

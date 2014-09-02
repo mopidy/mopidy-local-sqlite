@@ -2,7 +2,9 @@ from __future__ import unicode_literals
 
 from mopidy import config, ext
 
-__version__ = '0.5.0'
+import os
+
+__version__ = '0.6.0'
 
 
 class Extension(ext.Extension):
@@ -12,7 +14,6 @@ class Extension(ext.Extension):
     version = __version__
 
     def get_default_config(self):
-        import os
         conf_file = os.path.join(os.path.dirname(__file__), 'ext.conf')
         return config.read(conf_file)
 
@@ -31,4 +32,7 @@ class Extension(ext.Extension):
 
     def setup(self, registry):
         from .library import SQLiteLibrary
+        from .httpapp import factory
+
         registry.add('local:library', SQLiteLibrary)
+        registry.add('http:app', {'name': 'sqlite', 'factory': factory})

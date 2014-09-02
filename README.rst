@@ -9,10 +9,14 @@ based on SQLite's FTS_ modules.  It also notices updates via ``mopidy
 local scan`` while Mopidy is running, so you can scan your media
 library periodically from a cron job, for example.
 
-This extension also features experimental support for extracting and
-using album art embedded in local media files.  At this point,
-however, this will be mostly of interest to developers, so it is
-disabled by default.
+This extension also features *experimental* support for using album
+art embedded in local media files.  If ``extract_images`` is set to
+``true``, images will be extracted from media files and stored
+seperately in Mopidy's ``local/data_dir``.  Corresponding image URIs
+will be provided for albums, so Web clients can access these images
+through Mopidy's integrated Web server.  Note, however, that `some
+clients`_ might still ignore album images provided by
+Mopidy-Local-SQLite.
 
 
 Installation
@@ -65,12 +69,10 @@ but beware that these are still subject to change::
 
     # directory where extracted images are stored; if relative, names a
     # subdirectory of local/data_dir
-    image_dir = images
+    image_dir = sqlite/images
 
-    # base URI for images; if blank, the local file URI will be used; if
-    # using the Mopidy-HTTP-Images extension for serving local images to
-    # Web clients, this should be set to "/images/"
-    image_base_uri =
+    # base URI for images; if blank, the local file URI will be used
+    image_base_uri = /sqlite/images/
 
     # default extension for image files if the image type cannot be
     # determined; leave blank to skip such images
@@ -113,6 +115,7 @@ affected by this.
 .. _Mopidy: http://www.mopidy.com/
 .. _SQLite: http://www.sqlite.org/
 .. _FTS: http://www.sqlite.org/fts3.html
+.. _some clients: https://github.com/martijnboland/moped/issues/17
 
 .. _Issue Tracker: https://github.com/tkem/mopidy-local-sqlite/issues/
 .. _Source Code: https://github.com/tkem/mopidy-local-sqlite

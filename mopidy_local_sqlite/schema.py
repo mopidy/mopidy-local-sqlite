@@ -258,7 +258,9 @@ def browse_tracks(c):
 
 
 def search_tracks(c, query, limit, offset, exact, uris=[]):
-    if exact:
+    if not query:
+        sql, params = ('SELECT * FROM tracks', [])
+    elif exact:
         sql, params = _build_search_query(query)
     else:
         sql, params = _build_fts_query(query)

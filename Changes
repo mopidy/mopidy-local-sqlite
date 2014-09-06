@@ -1,5 +1,10 @@
 Revision history for Mopidy-Local-SQLite
 
+0.6.1   2014-09-06
+
+        - Handle empty queries in schema.search():
+          https://github.com/tkem/mopidy-local-sqlite/issues/15
+
 0.6.0   2014-09-02
 
         - Add HTTP handler for accessing local images.

@@ -122,19 +122,17 @@ class SQLiteLibrary(local.Library):
     def add(self, track):
         try:
             track = self._validate_track(track)
-        except ValueError as e:
-            logger.warn('Skipped %s: %s', track.uri, e)
-            return
-        if self._config['extract_images']:
             album = track.album
-            # TBD: how to handle track w/o album?
-            if album and not album.images:
+            # tracks w/o albums: wait for Mopidy's infamous "meta data model"
+            if self._config['extract_images'] and album and not album.images:
                 try:
                     album = album.copy(images=self._extract_images(track))
                 except Exception as e:
                     logger.warn('Extracting images from %s: %s', track.uri, e)
             track = track.copy(album=album)
-        schema.insert_track(self._connect(), track)
+            schema.insert_track(self._connect(), track)
+        except Exception as e:
+            logger.warn('Skipped %s: %s', track.uri, e)
 
     def remove(self, uri):
         schema.delete_track(self._connect(), uri)

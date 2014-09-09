@@ -19,6 +19,7 @@ class Extension(ext.Extension):
 
     def get_config_schema(self):
         schema = super(Extension, self).get_config_schema()
+        schema['encodings'] = config.List()
         schema['hash'] = config.String()
         schema['use_album_mbid_uri'] = config.Boolean()
         schema['use_artist_mbid_uri'] = config.Boolean()

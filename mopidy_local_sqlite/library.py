@@ -217,7 +217,9 @@ class SQLiteLibrary(local.Library):
         if track.name:
             name = track.name
         else:
-            name = urllib.unquote(_TRACK_URI_RE.match(track.uri).group(2))
+            logger.debug('%s: no track name', track.uri)
+            basename = str(_TRACK_URI_RE.match(track.uri).group(2))
+            name = self._decode(urllib.unquote(basename))
         if track.album and track.album.name:
             album = self._validate_album(track.album)
         else:
@@ -229,6 +231,14 @@ class SQLiteLibrary(local.Library):
             composers=map(self._validate_artist, track.composers),
             performers=map(self._validate_artist, track.performers)
         )
+
+    def _decode(self, string):
+        for encoding in self._config['encodings']:
+            try:
+                return string.decode(encoding)
+            except UnicodeError:
+                pass
+        raise UnicodeError('No matching encoding found for %r' % string)
 
     def _extract_images(self, track):
         import imghdr

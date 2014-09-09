@@ -16,6 +16,7 @@ class ExtensionTest(unittest.TestCase):
     def test_get_config_schema(self):
         ext = Extension()
         schema = ext.get_config_schema()
+        self.assertIn('encodings', schema)
         self.assertIn('hash', schema)
         self.assertIn('use_album_mbid_uri', schema)
         self.assertIn('use_artist_mbid_uri', schema)

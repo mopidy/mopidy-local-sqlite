@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Mopidy-Local-SQLite Image Server</title>
+    <link rel="stylesheet" type="text/css" href="/mopidy/mopidy.css">
+    <style>
+       .thumbnail { width: 80px; height: 80px; }
+    </style>
+  </head>
+  <body>
+    <h1>Mopidy-Local-SQLite Image Server</h1>
+    <p>
+      This Web client can be used to serve images extracted from local
+      media files by the Mopidy-Local-SQLite extension.
+    </p>
+    {% if not images %}
+    <p>
+      To start using it, set <code>local-sqlite/extract_images</code>
+      to <code>true</code>, and perform a full re-scan of your media
+      library.
+    </p>
+    {% else %}
+    <div>
+      {% for image in images %}
+      <a href="{{ image }}"><img class="thumbnail" src="{{ image }}"></a>
+      {% end %}
+    </div>
+    {% end %}
+  </body>
+</html>

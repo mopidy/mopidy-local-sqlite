@@ -4,7 +4,7 @@ from mopidy import config, ext
 
 import os
 
-__version__ = '0.6.2'
+__version__ = '0.6.3'
 
 
 class Extension(ext.Extension):
@@ -33,7 +33,7 @@ class Extension(ext.Extension):
 
     def setup(self, registry):
         from .library import SQLiteLibrary
-        from .httpapp import factory
+        from .http import factory
 
         registry.add('local:library', SQLiteLibrary)
         registry.add('http:app', {'name': 'sqlite', 'factory': factory})

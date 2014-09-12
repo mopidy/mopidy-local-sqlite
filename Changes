@@ -1,5 +1,9 @@
 Revision history for Mopidy-Local-SQLite
 
+0.6.4   2014-09-11
+
+        - Fix packaging issue.
+
 0.6.3   2014-09-11
 
         - Add index page for HTTP handler.

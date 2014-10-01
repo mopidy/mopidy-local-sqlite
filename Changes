@@ -1,67 +1,107 @@
-Revision history for Mopidy-Local-SQLite
+0.7.0 2014-10-08
+----------------
 
-0.6.4   2014-09-11
+- Support for external album art.
 
-        - Fix packaging issue.
+- Support for browsing by genre and date.
 
-0.6.3   2014-09-11
+- Unified browsing: return albums for composers, genres, etc.
 
-        - Add index page for HTTP handler.
+- Configurable root directories with refactored URI scheme.
 
-0.6.2   2014-09-09
+- Deprecate `foreign_keys`, `hash` and `default_image_extension`
+  confvals.
 
-        - Catch all exceptions within `SQLiteLibrary.add()`.
+- Depend on Mopidy >= 0.19.4 for `mopidy.local.ROOT_DIRECTORY_URI`.
 
-        - Configurable encoding(s) for generated track names.
 
-0.6.1   2014-09-06
+0.6.4 2014-09-11
+----------------
 
-        - Handle empty queries in `schema.search()`.
+- Fix packaging issue.
 
-0.6.0   2014-09-02
 
-        - Add HTTP handler for accessing local images.
+0.6.3 2014-09-11
+----------------
 
-0.5.0   2014-08-26
+- Add index page for HTTP handler.
 
-        - Create `albums`, `artists`, etc. views.
 
-        _ Support browsing by composer and performer.
+0.6.2 2014-09-09
+----------------
 
-        - Perform ANALYZE after local scan.
+- Catch all exceptions within `SQLiteLibrary.add()`.
 
-0.4.0   2014-08-24
+- Configurable encoding(s) for generated track names.
 
-        - Add `uris` parameter to schema.search_tracks().
 
-0.3.2   2014-08-22
+0.6.1 2014-09-06
+----------------
 
-        - Fixed exception handling when extracting images.
+- Handle empty queries in `schema.search()`.
 
-0.3.1   2014-08-22
 
-        - Delete unreferenced image files after local scan.
+0.6.0 2014-09-02
+----------------
 
-0.3.0   2014-08-21
+- Add HTTP handler for accessing local images.
 
-        - Extract images from local media files (experimental).
 
-0.2.0   2014-08-20
+0.5.0 2014-08-26
+----------------
 
-        - Support for indexed and full-text search.
+- Create `albums`, `artists`, etc. views.
 
-        - Support for local album images (Mopidy v0.20).
+_ Support browsing by composer and performer.
 
-        - Missing track names are generated from the track's URI.
+- Perform `ANALYZE` after local scan.
 
-        - New configuration options for album/artist URI generation.
 
-0.1.1   2014-08-14
+0.4.0 2014-08-24
+----------------
 
-        - Browsing artists no longer returns composers and performers.
+- Add `uris` parameter to schema.search_tracks().
 
-        - Clean up artists/albums after import.
 
-0.1.0   2014-08-13
+0.3.2 2014-08-22
+----------------
 
-        - Initial release.
+- Fixed exception handling when extracting images.
+
+
+0.3.1 2014-08-22
+----------------
+
+- Delete unreferenced image files after local scan.
+
+
+0.3.0 2014-08-21
+----------------
+
+- Extract images from local media files (experimental).
+
+
+0.2.0 2014-08-20
+----------------
+
+- Support for indexed and full-text search.
+
+- Support for local album images (Mopidy v0.20).
+
+- Missing track names are generated from the track's URI.
+
+- New configuration options for album/artist URI generation.
+
+
+0.1.1 2014-08-14
+----------------
+
+- Browsing artists no longer returns composers and performers.
+
+- Clean up artists/albums after import.
+
+
+0.1.0 2014-08-13
+----------------
+
+- Initial release.

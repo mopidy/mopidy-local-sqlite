@@ -13,13 +13,12 @@ class LocalLibraryProviderTest(unittest.TestCase):
 
     config = {
         'local-sqlite': {
+            'directories': [],
             'encodings': ['utf-8', 'latin-1'],
-            'extract_images': False,
-            'foreign_keys': True,
-            'hash': 'md5',
             'timeout': 1.0,
             'use_album_mbid_uri': False,
-            'use_artist_mbid_uri': False
+            'use_artist_mbid_uri': False,
+            'extract_images': False
         }
     }
 

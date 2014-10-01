@@ -4,66 +4,55 @@ import hashlib
 import logging
 import os
 import re
-import shutil
 import sqlite3
-import urllib
-import urlparse
+import uritools
 
 from mopidy import local
-from mopidy.audio.scan import Scanner
 from mopidy.models import Ref, SearchResult
 
 from . import Extension, schema
 
-_LOCAL_URI_RE = re.compile(r'local:(\w+)(?::(.*))?\Z')
+_BROWSE_TYPES = {
+    'track': lambda c, q: schema.browse(c, Ref.TRACK),
+    'album': lambda c, q: schema.browse(c, Ref.ALBUM),
+    'artist': lambda c, q: [
+        ref.copy(type=Ref.DIRECTORY, uri=ref.uri+'?role='+q['role'][0])
+        for ref in schema.browse(c, Ref.ARTIST, role=q['role'][0])
+    ],
+    'genre': lambda c, q: [
+        Ref.directory(uri='local:genre:'+uritools.uriencode(genre), name=genre)
+        for genre in schema.genres(c)
+    ],
+    'date': lambda c, q: [
+        Ref.directory(uri='local:date:'+date, name=date)
+        for date in schema.dates(c, format=q['format'][0])
+    ]
+}
 
 _TRACK_URI_RE = re.compile(r'local:track:(.*/)?([^.]+)(\..*)?\Z')
 
-# FIXME: re-think URI scheme (local:composer:local:artist:...)
-_ROOT_DIRECTORIES = (
-    Ref.directory(uri=b'local:album', name='Albums'),
-    Ref.directory(uri=b'local:artist', name='Artists'),
-    Ref.directory(uri=b'local:composer', name='Composers'),
-    Ref.directory(uri=b'local:performer', name='Performers'),
-    Ref.directory(uri=b'local:track', name='Tracks')
-)
-
 logger = logging.getLogger(__name__)
-
-
-def _mkdir(*args):
-    path = os.path.join(*args)
-    if not os.path.isdir(path):
-        logger.info('Creating directory %s', path)
-        os.makedirs(path, 0755)
-    return path
-
-
-def _mkuri(type, variant, model):
-    if variant == 'mbid':
-        data = model.musicbrainz_id
-    else:
-        hash = hashlib.new(variant)
-        hash.update(str(model))
-        data = hash.hexdigest()
-    assert data, 'uri data must not be null'
-    return b'local:%s:%s:%s' % (type, variant, data)
 
 
 class SQLiteLibrary(local.Library):
 
     name = 'sqlite'
 
-    _connection = None
-
     def __init__(self, config):
-        data_dir = config['local']['data_dir']
-        self._config = config[Extension.ext_name]
-        if self._config['extract_images']:
-            self._image_dir = os.path.join(data_dir, self._config['image_dir'])
-            self._media_dir = config['local']['media_dir']
-            self._scanner = Scanner(config['local']['scan_timeout'])
-        self._dbpath = os.path.join(_mkdir(data_dir, b'sqlite'), b'library.db')
+        data_dir = Extension.make_data_dir(config)
+        self._config = ext_config = config[Extension.ext_name]
+        self._dbpath = os.path.join(data_dir, b'library.db')
+        self._connection = None
+        self._directories = []
+        for line in ext_config['directories']:
+            name, uri = line.rsplit(None, 2)
+            ref = Ref.directory(uri=uri, name=name)
+            self._directories.append(ref)
+        if ext_config['extract_images']:
+            from .images import ImageDirectory
+            self._images = ImageDirectory(config)
+        else:
+            self._images = None
 
     def load(self):
         with self._connect() as connection:
@@ -72,64 +61,53 @@ class SQLiteLibrary(local.Library):
             return schema.count_tracks(connection)
 
     def lookup(self, uri):
-        return schema.get_track(self._connect(), uri)
+        return schema.lookup(self._connect(), uri)
 
     def browse(self, uri):
         try:
-            # FIXME: https://github.com/mopidy/mopidy/issues/833
-            type, id = _LOCAL_URI_RE.match(uri or 'local:directory').groups()
-        except AttributeError:
-            logger.error('Invalid local URI %s', uri)
-            return []
-        if type == 'directory':
-            return _ROOT_DIRECTORIES
-        elif type == 'album':
-            return schema.browse_albums(self._connect(), uri if id else None)
-        elif type == 'artist':
-            return schema.browse_artists(self._connect(), uri if id else None)
-        elif type == 'composer':
-            return schema.browse_composers(self._connect(), id or None)
-        elif type == 'performer':
-            return schema.browse_performers(self._connect(), id or None)
-        elif type == 'track' and id is None:
-            return schema.browse_tracks(self._connect())
-        else:
-            logger.error('Invalid browse URI %s', uri)
-            return []
+            if uri == self.ROOT_DIRECTORY_URI:
+                return self._directories
+            elif uri.startswith('local:directory'):
+                return self._browse_directory(uri)
+            elif uri.startswith('local:album'):
+                return self._browse_album(uri)
+            elif uri.startswith('local:artist'):
+                return self._browse_artist(uri)
+            elif uri.startswith('local:genre'):
+                return self._browse_genre(uri)
+            elif uri.startswith('local:date'):
+                return self._browse_date(uri)
+            else:
+                raise ValueError('Invalid browse URI')
+        except Exception as e:
+            logger.error('Error browsing %s: %s', uri, e)
+        return []
 
     def search(self, query=None, limit=100, offset=0, uris=None, exact=False):
-        q = []
-        for field, values in (query.items() if query else []):
-            if isinstance(values, basestring):
-                q.append((field, values))
-            else:
-                q.extend((field, value) for value in values)
-        filters = []
-        for uri in uris or []:
-            type, id = _LOCAL_URI_RE.match(uri).groups()
-            if id and type != 'directory':
-                filters.append((type, uri))
-            else:
-                logger.debug('ignoring search URI %s', uri)
-        with self._connect() as c:
+        try:
+            q = []
+            for field, values in (query.items() if query else []):
+                if isinstance(values, basestring):
+                    q.append((field, values))
+                else:
+                    q.extend((field, value) for value in values)
+            filters = _search_filters_from_uris(uris or [])
+            c = self._connect()
             tracks = schema.search_tracks(c, q, limit, offset, exact, filters)
-        # TODO: add local:search:<query>
-        return SearchResult(uri='local:search', tracks=tracks)
+            uri = uritools.uricompose('local', path='search', query=q)
+            return SearchResult(uri=uri, tracks=tracks)
+        except Exception as e:
+            logger.error('Error searching %s: %s', Extension.dist_name, e)
+        return None
 
     def begin(self):
-        return schema.iter_tracks(self._connect())
+        return schema.tracks(self._connect())
 
     def add(self, track):
         try:
             track = self._validate_track(track)
-            album = track.album
-            # tracks w/o albums: wait for Mopidy's infamous "meta data model"
-            if self._config['extract_images'] and album and not album.images:
-                try:
-                    album = album.copy(images=self._extract_images(track))
-                except Exception as e:
-                    logger.warn('Extracting images from %s: %s', track.uri, e)
-            track = track.copy(album=album)
+            if self._images:
+                track = self._images.add(track)
             schema.insert_track(self._connect(), track)
         except Exception as e:
             logger.warn('Skipped %s: %s', track.uri, e)
@@ -145,15 +123,8 @@ class SQLiteLibrary(local.Library):
 
     def close(self):
         schema.cleanup(self._connection)
-        if self._config['extract_images'] and os.path.isdir(self._image_dir):
-            images = frozenset(schema.iter_images(self._connection))
-            for root, _, filenames in os.walk(self._image_dir):
-                for filename in filenames:
-                    if self._image_uri(filename) not in images:
-                        filepath = os.path.join(root, filename)
-                        logger.info('Deleting file %s', filepath)
-                        os.remove(filepath)
-        self._connection.execute('ANALYZE')
+        if self._images:
+            self._images.cleanup(schema.images(self._connection))
         self._connection.commit()
         self._connection.close()
         self._connection = None
@@ -165,28 +136,60 @@ class SQLiteLibrary(local.Library):
             except sqlite3.Error as e:
                 logger.error('Error clearing SQLite database: %s', e)
                 return False
-        if self._config['extract_images'] and os.path.isdir(self._image_dir):
+        if self._images:
             try:
-                shutil.rmtree(self._image_dir)
-            except OSError as e:
+                self._images.clear()
+            except Exception as e:
                 logger.error('Error clearing image directory: %s', e)
                 return False
         return True
 
     def _connect(self):
         if not self._connection:
-            connection = sqlite3.connect(
+            self._connection = sqlite3.connect(
                 self._dbpath,
+                factory=schema.Connection,
                 timeout=self._config['timeout'],
                 check_same_thread=False,
-                factory=schema.Connection
             )
-            if self._config['foreign_keys']:
-                connection.execute('PRAGMA foreign_keys = ON')
-            else:
-                connection.execute('PRAGMA foreign_keys = OFF')
-            self._connection = connection
         return self._connection
+
+    def _browse(self, **kwargs):
+        connection = self._connect()
+        query = '&'.join('='.join(item) for item in kwargs.items())
+        albums = [
+            ref.copy(uri=ref.uri+'?'+query)
+            for ref in schema.browse(connection, Ref.ALBUM, **kwargs)
+        ]
+        tracks = schema.browse(connection, Ref.TRACK, album=None, **kwargs)
+        return albums + tracks
+
+    def _browse_directory(self, uri):
+        query = uritools.urisplit(uri).getquerydict()
+        return _BROWSE_TYPES[query['type'][0]](self._connect(), query)
+
+    def _browse_album(self, uri, order=('disc_no', 'track_no', 'name')):
+        parts = uritools.urisplit(uri)
+        kwargs = {'album': 'local:%s' % parts.path}
+        for key, values in parts.getquerydict().items():
+            kwargs[key] = values[0]
+        return schema.browse(self._connect(), Ref.TRACK, order=order, **kwargs)
+
+    def _browse_artist(self, uri):
+        parts = uritools.urisplit(uri)
+        artist = 'local:%s' % parts.path
+        role = parts.getquerydict().get('role', ['artist'])[0]
+        return self._browse(**{role: artist})
+
+    def _browse_genre(self, uri):
+        parts = uritools.urisplit(uri)
+        genre = uritools.uridecode(parts.path.partition(':')[2])
+        return self._browse(genre=genre)
+
+    def _browse_date(self, uri):
+        parts = uritools.urisplit(uri)
+        date = uritools.uridecode(parts.path.partition(':')[2])
+        return self._browse(date=date)
 
     def _validate_artist(self, artist):
         if not artist.name:
@@ -194,9 +197,9 @@ class SQLiteLibrary(local.Library):
         if artist.uri:
             uri = artist.uri
         elif artist.musicbrainz_id and self._config['use_artist_mbid_uri']:
-            uri = _mkuri('artist', 'mbid', artist)
+            uri = _make_uri('artist', 'mbid', artist)
         else:
-            uri = _mkuri('artist', self._config['hash'], artist)
+            uri = _make_uri('artist', 'md5', artist)
         return artist.copy(uri=uri)
 
     def _validate_album(self, album):
@@ -205,9 +208,9 @@ class SQLiteLibrary(local.Library):
         if album.uri:
             uri = album.uri
         elif album.musicbrainz_id and self._config['use_album_mbid_uri']:
-            uri = _mkuri('album', 'mbid', album)
+            uri = _make_uri('album', 'mbid', album)
         else:
-            uri = _mkuri('album', self._config['hash'], album)
+            uri = _make_uri('album', 'md5', album)
         artists = map(self._validate_artist, album.artists)
         return album.copy(uri=uri, artists=artists)
 
@@ -217,9 +220,7 @@ class SQLiteLibrary(local.Library):
         if track.name:
             name = track.name
         else:
-            logger.debug('%s: no track name', track.uri)
-            basename = str(_TRACK_URI_RE.match(track.uri).group(2))
-            name = self._decode(urllib.unquote(basename))
+            name = self._decode(_TRACK_URI_RE.match(track.uri).group(2))
         if track.album and track.album.name:
             album = self._validate_album(track.album)
         else:
@@ -235,52 +236,43 @@ class SQLiteLibrary(local.Library):
     def _decode(self, string):
         for encoding in self._config['encodings']:
             try:
-                return string.decode(encoding)
+                return uritools.uridecode(str(string), encoding=encoding)
             except UnicodeError:
-                pass
+                logger.debug('Not a %s string: %r', encoding, string)
         raise UnicodeError('No matching encoding found for %r' % string)
 
-    def _extract_images(self, track):
-        import imghdr
-        # FIXME: internal Mopidy APIs
-        from mopidy.local import translator
-        from mopidy.utils import path
 
-        basedir = self._media_dir
-        relpath = translator.local_track_uri_to_path(track.uri, basedir)
-        fileuri = path.path_to_uri(os.path.join(basedir, relpath))
-        data = self._scanner.scan(fileuri)
-        tags = data['tags']
-
-        images = []
-        for imgbuf in tags.get('image', []):
-            logger.debug('%s: found image, size=%s', track.uri, imgbuf.size)
-            if not imgbuf.data or not imgbuf.size:
-                logger.warn('Skipping empty image: %s', track.uri)
-                continue
-            filetype = imghdr.what(relpath, imgbuf.data)
-            if filetype:
-                ext = b'.' + filetype
-            elif self._config['default_image_extension']:
-                ext = self._config['default_image_extension']
-            else:
-                logger.warn('Skipping unknown image type for %s', track.uri)
-                continue
-            hash = hashlib.new(self._config['hash'])
-            hash.update(imgbuf.data)
-            filename = hash.hexdigest() + ext
-            filepath = os.path.join(self._image_dir, filename)
-            path.get_or_create_file(str(filepath), True, imgbuf.data)
-            images.append(self._image_uri(filename))
-        return images
-
-    def _image_uri(self, filename):
-        from mopidy.utils import path
-
-        basedir = self._image_dir
-        baseuri = self._config['image_base_uri']
-
-        if baseuri:
-            return urlparse.urljoin(baseuri, filename)
+def _search_filters_from_uris(uris):
+    # FIXME: new filter scheme!
+    filters = []
+    for uri in (uris or []):
+        if uri.startswith('local:album:'):
+            filters.append(('album', uri))
+        elif uri.startswith('local:artist:'):
+            splituri = uritools.urisplit(uri)
+            artist = uritools.uriunsplit(splituri[0:3] + (None, None))
+            role = splituri.getquerydict().get('role', ['artist'])[0]
+            if role == 'artist':
+                filters.append(('albumartist', artist))
+            filters.append((role, artist))
+        elif uri.startswith('local:genre:'):
+            genre = uritools.uridecode(uri.rpartition(':')[2])
+            filters.append(('genre', genre))
+        elif uri.startswith('local:date:'):
+            date = uritools.uridecode(uri.rpartition(':')[2])
+            filters.append(('date', date))
+            filters.append(('albumdate', date))
         else:
-            return path.path_to_uri(os.path.join(basedir, filename))
+            logger.debug('Skipping search URI %s', uri)
+    return filters
+
+
+def _make_uri(type, variant, model):
+    if variant == 'mbid':
+        data = model.musicbrainz_id
+    else:
+        hash = hashlib.new(variant)
+        hash.update(str(model))
+        data = hash.hexdigest()
+    assert data, 'uri data must not be null'
+    return b'local:%s:%s:%s' % (type, variant, data)

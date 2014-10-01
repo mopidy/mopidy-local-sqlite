@@ -15,7 +15,7 @@ art embedded in local media files.  If ``extract_images`` is set to
 seperately in Mopidy's ``local/data_dir``.  Corresponding image URIs
 will be provided for albums, so Web clients can access these images
 through Mopidy's integrated Web server.  Note, however, that `some
-clients`_ might still ignore album images provided by
+clients`_ will still ignore album images provided by
 Mopidy-Local-SQLite.
 
 
@@ -47,8 +47,22 @@ but beware that these are still subject to change::
     [local-sqlite]
     enabled = true
 
-    # hash algorithm used for generating local URIs and image file names
-    hash = md5
+    # top-level directories for browsing, format is <name> <uri>
+    directories =
+        Albums      local:directory?type=album
+        Artists     local:directory?type=artist&role=artist
+        Composers   local:directory?type=artist&role=composer
+        Performers  local:directory?type=artist&role=performer
+        Genres      local:directory?type=genre
+        Years       local:directory?type=date&format=%25Y
+        Tracks      local:directory?type=track
+
+    # encodings (in order of preference) to try when generating track
+    # names from file URIs
+    encodings = utf-8, latin-1
+
+    # database connection timeout in seconds
+    timeout = 10
 
     # whether to use an album's musicbrainz_id for generating its URI
     use_album_mbid_uri = true
@@ -58,35 +72,29 @@ but beware that these are still subject to change::
     # multi-artist tracks [https://github.com/sampsyo/beets/issues/907]
     use_artist_mbid_uri = false
 
-    # set to "off" to disable enforcement of foreign key constraints
-    foreign_keys = on
-
-    # database connection timeout in seconds
-    timeout = 10
-
     # whether to extract images from local media files (experimental)
     extract_images = false
 
-    # directory where extracted images are stored; if relative, names a
-    # subdirectory of local/data_dir
-    image_dir = sqlite/images
+    # directory where extracted images are stored; if a relative path is
+    # given, names a subdirectory of <local/data_dir>/sqlite
+    image_dir = images
 
     # base URI for images; if blank, the local file URI will be used
     image_base_uri = /sqlite/images/
 
-    # default extension for image files if the image type cannot be
-    # determined; leave blank to skip such images
-    default_image_extension =
+    # file names to check for in the current directory when no embedded
+    # album art can be found; items may contain UNIX shell patterns
+    album_art_files = *.jpg, *.jpeg, *.png
 
 
 Project Resources
 ------------------------------------------------------------------------
 
-.. image:: http://img.shields.io/pypi/v/Mopidy-Local-SQLite.svg
+.. image:: http://img.shields.io/pypi/v/Mopidy-Local-SQLite.svg?style=flat
     :target: https://pypi.python.org/pypi/Mopidy-Local-SQLite/
     :alt: Latest PyPI version
 
-.. image:: http://img.shields.io/pypi/dm/Mopidy-Local-SQLite.svg
+.. image:: http://img.shields.io/pypi/dm/Mopidy-Local-SQLite.svg?style=flat
     :target: https://pypi.python.org/pypi/Mopidy-Local-SQLite/
     :alt: Number of PyPI downloads
 
@@ -118,7 +126,7 @@ affected by this.
 .. _some clients: https://github.com/martijnboland/moped/issues/17
 
 .. _Issue Tracker: https://github.com/tkem/mopidy-local-sqlite/issues/
-.. _Source Code: https://github.com/tkem/mopidy-local-sqlite
+.. _Source Code: https://github.com/tkem/mopidy-local-sqlite/
 .. _Change Log: https://raw.github.com/tkem/mopidy-local-sqlite/master/Changes
 
 .. _Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0

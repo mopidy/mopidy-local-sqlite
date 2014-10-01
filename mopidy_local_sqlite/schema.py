@@ -2,16 +2,53 @@ from __future__ import unicode_literals
 
 import itertools
 import logging
+import operator
 import os
 import sqlite3
 
 from mopidy.models import Artist, Album, Track, Ref
 
-logger = logging.getLogger(__name__)
-
-USER_VERSION = 3
-
-_SCRIPTS_DIR = os.path.join(os.path.dirname(__file__), b'scripts')
+_FILTER_MAPPINGS = {
+    Ref.ARTIST: {
+    },
+    Ref.ALBUM: {
+        'artist': """
+        ? IN (
+            SELECT album.artist_uri
+             UNION
+            SELECT artists FROM track WHERE album = album.uri
+        )
+        """,
+        'composer': """
+        ? IN (SELECT composers FROM track WHERE album = album.uri)
+        """,
+        'performer': """
+        ? IN (SELECT performers FROM track WHERE album = album.uri)
+        """,
+        'genre': """
+        ? IN (SELECT genre FROM track WHERE album = album.uri)
+        """,
+        'date': """
+        EXISTS (
+            SELECT * FROM track WHERE album = album.uri AND date LIKE ? || '%'
+        )
+        """
+    },
+    Ref.TRACK: {
+        'album': 'album_uri = ?',
+        '!album': 'album_uri IS NULL',
+        'artist': '? IN (artist_uri, albumartist_uri)',
+        '!artist': '(artist_uri IS NULL AND albumartist_uri IS NULL)',
+        'composer': 'composer_uri = ?',
+        '!composer': 'composer_uri IS NULL',
+        'performer': 'performer_uri = ?',
+        '!performer': 'performer_uri IS NULL',
+        'genre': 'genre = ?',
+        '!genre': 'genre IS NULL',
+        'date': "date LIKE ? || '%'",
+        '!date': "date IS NULL"
+    }
+}
 
 _SEARCH_FIELDS = {
     'uri',
@@ -33,21 +70,238 @@ SELECT *
  WHERE docid IN (SELECT docid FROM %s WHERE %s)
 """
 
-_SEARCH_URI_MAPPING = {
-    'album': 'album_uri = ?',
-    'artist': 'artist_uri = ?',
-    'composer': 'composer_uri = ?',
-    'performer': 'performer_uri = ?',
-    'albumartist': 'albumartist_uri = ?'
-}
+_USER_VERSION = 3
+
+logger = logging.getLogger(__name__)
 
 
-def _sqlstr(fmt, *args):
-    return fmt % tuple(', '.join(['?'] * n) for n in args)
+class Connection(sqlite3.Connection):
+
+    class Row(sqlite3.Row):
+
+        def __getattr__(self, name):
+            return self[name]
+
+    def __init__(self, *args, **kwargs):
+        sqlite3.Connection.__init__(self, *args, **kwargs)
+        self.execute('PRAGMA foreign_keys = ON')
+        self.row_factory = self.Row
+
+    def executenamed(self, sql, params):
+        sql = sql % (', '.join(params.keys()), ', '.join(['?'] * len(params)))
+        logger.debug('SQLite statement: %s %r', sql, params.values())
+        return self.execute(sql, params.values())
 
 
-def _ref(row):
-    return Ref(type=row.type, uri=row.uri, name=row.name)
+def load(c):
+    scripts_dir = os.path.join(os.path.dirname(__file__), b'scripts')
+    user_version = c.execute('PRAGMA user_version').fetchone()[0]
+    if not user_version:
+        logger.info('Creating SQLite database schema v%s', _USER_VERSION)
+        script = os.path.join(scripts_dir, 'create-v%s.sql' % _USER_VERSION)
+        c.executescript(open(script).read())
+        user_version = c.execute('PRAGMA user_version').fetchone()[0]
+    while user_version != _USER_VERSION:
+        logger.info('Upgrading SQLite database schema v%s', user_version)
+        script = os.path.join(scripts_dir, 'upgrade-v%s.sql' % user_version)
+        c.executescript(open(script).read())
+        user_version = c.execute('PRAGMA user_version').fetchone()[0]
+    return user_version
+
+
+def tracks(c):
+    return itertools.imap(_track, c.execute('SELECT * FROM tracks'))
+
+
+def genres(c):
+    return itertools.imap(operator.itemgetter(0), c.execute("""
+    SELECT DISTINCT genre
+      FROM tracks
+     WHERE genre IS NOT NULL
+     ORDER BY genre
+    """))
+
+
+def dates(c, format='%Y-%m-%d'):
+    return itertools.imap(operator.itemgetter(0), c.execute("""
+    SELECT DISTINCT strftime(?, date) AS date
+      FROM tracks
+     WHERE date IS NOT NULL
+     ORDER BY date
+    """, [format]))
+
+
+def images(c):
+    for row in c.execute('SELECT images FROM album WHERE images IS NOT NULL'):
+        for image in row[0].split():
+            yield image
+
+
+def lookup(c, uri):
+    row = c.execute('SELECT * FROM tracks WHERE uri = ?', [uri]).fetchone()
+    if row:
+        return _track(row)
+    else:
+        return None
+
+
+def browse(c, type, role=None, order=('name',), **kwargs):
+    sql = "SELECT uri, name FROM %ss AS %s" % (role or type, type)
+    filters, params = _make_filters(type, kwargs.iteritems())
+    if filters:
+        sql += ' WHERE %s' % ' AND '.join(filters)
+    if order:
+        sql += ' ORDER BY %s' % ', '.join(order)
+    logger.debug('SQLite query: %s %r', sql, params)
+    rows = c.execute(sql, params)
+    return [Ref(type=type, uri=row.uri, name=row.name) for row in rows]
+
+
+def search_tracks(c, query, limit, offset, exact, filters=[]):
+    if not query:
+        sql, params = ('SELECT * FROM tracks', [])
+    elif exact:
+        sql, params = _make_indexed_query(query)
+    else:
+        sql, params = _make_fulltext_query(query)
+    if filters:
+        filters, fparams = _make_filters('track', filters)
+        sql = 'SELECT * FROM (%s) WHERE %s' % (sql, ' OR '.join(filters))
+        params.extend(fparams)
+    logger.debug('SQLite query: %s %r', sql, params)
+    rows = c.execute(sql + ' LIMIT ? OFFSET ?', params + [limit, offset])
+    return map(_track, rows)
+
+
+def insert_artists(c, artists):
+    if not artists:
+        return None
+    if len(artists) != 1:
+        logger.warn('Ignoring multiple artists: %r', artists)
+    artist = next(iter(artists))
+    c.executenamed('INSERT OR REPLACE INTO artist (%s) VALUES (%s)', {
+        'uri': artist.uri,
+        'name': artist.name,
+        'musicbrainz_id': artist.musicbrainz_id
+    })
+    return artist.uri
+
+
+def insert_album(c, album):
+    if not album or not album.name:
+        return None
+    c.executenamed('INSERT OR REPLACE INTO album (%s) VALUES (%s)', {
+        'uri': album.uri,
+        'name': album.name,
+        'artists': insert_artists(c, album.artists),
+        'num_tracks': album.num_tracks,
+        'num_discs': album.num_discs,
+        'date': album.date,
+        'musicbrainz_id': album.musicbrainz_id,
+        'images': ' '.join(album.images) if album.images else None
+    })
+    return album.uri
+
+
+def insert_track(c, track):
+    c.executenamed('INSERT OR REPLACE INTO track (%s) VALUES (%s)', {
+        'uri': track.uri,
+        'name': track.name,
+        'album': insert_album(c, track.album),
+        'artists': insert_artists(c, track.artists),
+        'composers': insert_artists(c, track.composers),
+        'performers': insert_artists(c, track.performers),
+        'genre': track.genre,
+        'track_no': track.track_no,
+        'disc_no': track.disc_no,
+        'date': track.date,
+        'length': track.length,
+        'bitrate': track.bitrate,
+        'comment': track.comment,
+        'musicbrainz_id': track.musicbrainz_id,
+        'last_modified': track.last_modified
+    })
+    return track.uri
+
+
+def delete_track(c, uri):
+    c.execute('DELETE FROM track WHERE uri = ?', (uri,))
+
+
+def count_tracks(c):
+    return c.execute('SELECT count(*) FROM track').fetchone()[0]
+
+
+def cleanup(c):
+    c.execute("""
+    DELETE FROM album WHERE NOT EXISTS (
+        SELECT uri FROM track WHERE track.album = album.uri
+    )
+    """)
+    c.execute("""
+    DELETE FROM artist WHERE NOT EXISTS (
+        SELECT uri FROM track WHERE track.artists = artist.uri
+         UNION
+        SELECT uri FROM track WHERE track.composers = artist.uri
+         UNION
+        SELECT uri FROM track WHERE track.performers = artist.uri
+         UNION
+        SELECT uri FROM album WHERE album.artists = artist.uri
+    )
+    """)
+    c.execute('ANALYZE')
+
+
+def clear(c):
+    c.executescript("""
+    DELETE FROM track;
+    DELETE FROM album;
+    DELETE FROM artist;
+    VACUUM;
+    """)
+
+
+def _make_filters(type, items):
+    mapping = _FILTER_MAPPINGS[type]
+    filters, params = [], []
+    for key, value in items:
+        try:
+            if value is None:
+                filters.append(mapping['!' + key])
+            else:
+                filters.append(mapping[key])
+                params.append(value)
+        except KeyError:
+            raise ValueError('Invalid %s filter: %s' % (type, key))
+    return (filters, params)
+
+
+def _make_indexed_query(query):
+    terms = []
+    params = []
+    for field, value in query:
+        if field == 'any':
+            terms.append('? IN (%s)' % ','.join(_SEARCH_FIELDS))
+        elif field in _SEARCH_FIELDS:
+            terms.append('%s = ?' % field)
+        else:
+            raise LookupError('Invalid search field: %s' % field)
+        params.append(value)
+    return (_SEARCH_SQL % ('search', ' AND '.join(terms)), params)
+
+
+def _make_fulltext_query(query):
+    terms = []
+    params = []
+    for field, value in query:
+        if field == 'any':
+            terms.append(_SEARCH_SQL % ('fts', 'fts MATCH ?'))
+        elif field in _SEARCH_FIELDS:
+            terms.append(_SEARCH_SQL % ('fts', '%s MATCH ?' % field))
+        else:
+            raise LookupError('Invalid search field: %s' % field)
+        params.append(value)
+    return (' INTERSECT '.join(terms), params)
 
 
 def _track(row):
@@ -102,273 +356,3 @@ def _track(row):
             musicbrainz_id=row.performer_musicbrainz_id
         )]
     return Track(**kwargs)
-
-
-def _build_search_query(query):
-    terms = []
-    params = []
-    for field, value in query:
-        if field == 'any':
-            terms.append('? IN (%s)' % ','.join(_SEARCH_FIELDS))
-        elif field in _SEARCH_FIELDS:
-            terms.append('%s = ?' % field)
-        else:
-            raise LookupError('Invalid search field: %s' % field)
-        params.append(value)
-    return (_SEARCH_SQL % ('search', ' AND '.join(terms)), params)
-
-
-def _build_fts_query(query):
-    terms = []
-    params = []
-    for field, value in query:
-        if field == 'any':
-            terms.append(_SEARCH_SQL % ('fts', 'fts MATCH ?'))
-        elif field in _SEARCH_FIELDS:
-            terms.append(_SEARCH_SQL % ('fts', '%s MATCH ?' % field))
-        else:
-            raise LookupError('Invalid search field: %s' % field)
-        params.append(value)  # TODO: escaping?
-    return (' INTERSECT '.join(terms), params)
-
-
-def _executescript(c, filename):
-    path = os.path.join(_SCRIPTS_DIR, filename)
-    script = open(path).read()
-    return c.executescript(script)
-
-
-def load(c):
-    user_version = c.execute('PRAGMA user_version').fetchone()[0]
-    if not user_version:
-        logger.info('Creating SQLite database schema v%s', USER_VERSION)
-        _executescript(c, 'create-v%s.sql' % USER_VERSION)
-        user_version = c.execute('PRAGMA user_version').fetchone()[0]
-    while user_version != USER_VERSION:
-        logger.info('Upgrading SQLite database schema v%s', user_version)
-        _executescript(c, 'upgrade-v%s.sql' % user_version)
-        user_version = c.execute('PRAGMA user_version').fetchone()[0]
-    return user_version
-
-
-def count_tracks(c):
-    return c.execute('SELECT count(*) FROM track').fetchone()[0]
-
-
-def iter_tracks(c):
-    return itertools.imap(_track, c.execute('SELECT * FROM tracks'))
-
-
-def iter_images(c):
-    for row in c.execute('SELECT images FROM album WHERE images IS NOT NULL'):
-        for image in row[0].split():
-            yield image
-
-
-def get_track(c, uri):
-    row = c.execute('SELECT * FROM tracks WHERE uri = ?', [uri]).fetchone()
-    if row:
-        return _track(row)
-    else:
-        return None
-
-
-def browse_albums(c, uri=None):
-    if uri is None:
-        sql = """
-        SELECT 'directory' AS type, uri, name
-          FROM albums
-         ORDER BY name
-        """
-    else:
-        sql = """
-        SELECT 'track' AS type, uri, name
-          FROM tracks
-         WHERE album_uri = :uri
-         ORDER BY disc_no, track_no, name
-        """
-    return map(_ref, c.execute(sql, {'uri': uri}))
-
-
-def browse_artists(c, uri=None):
-    if uri is None:
-        sql = """
-        SELECT 'directory' AS type, uri, name
-          FROM artists
-         ORDER BY name
-        """
-    else:
-        sql = """
-        SELECT 'directory' AS type, uri, name
-          FROM albums
-         WHERE artist_uri = :uri
-         UNION
-        SELECT 'track' AS type, uri, name
-          FROM tracks
-         WHERE artist_uri = :uri
-           AND (albumartist_uri IS NULL OR albumartist_uri != :uri)
-         ORDER BY type, name
-        """
-    return map(_ref, c.execute(sql, {'uri': uri}))
-
-
-def browse_composers(c, uri=None):
-    if uri is None:
-        # FIXME: uri scheme
-        sql = """
-        SELECT 'directory' AS type, 'local:composer:' || uri AS uri, name
-          FROM composers
-         ORDER BY name
-        """
-    else:
-        sql = """
-        SELECT 'track' AS type, uri, name
-          FROM tracks
-         WHERE composer_uri = :uri
-         ORDER BY name
-        """
-    return map(_ref, c.execute(sql, {'uri': uri}))
-
-
-def browse_performers(c, uri=None):
-    if uri is None:
-        # FIXME: uri scheme
-        sql = """
-        SELECT 'directory' AS type, 'local:performer:' || uri AS uri, name
-          FROM performers
-         ORDER BY name
-        """
-    else:
-        sql = """
-        SELECT 'track' AS type, uri, name
-          FROM tracks
-         WHERE performer_uri = :uri
-         ORDER BY name
-        """
-    return map(_ref, c.execute(sql, {'uri': uri}))
-
-
-def browse_tracks(c):
-    sql = """
-    SELECT 'track' AS type, uri, name
-      FROM tracks
-     ORDER BY name
-    """
-    return map(_ref, c.execute(sql))
-
-
-def search_tracks(c, query, limit, offset, exact, uris=[]):
-    if not query:
-        sql, params = ('SELECT * FROM tracks', [])
-    elif exact:
-        sql, params = _build_search_query(query)
-    else:
-        sql, params = _build_fts_query(query)
-    filters = []
-    for field, uri in uris:
-        try:
-            filters.append(_SEARCH_URI_MAPPING[field])
-        except KeyError:
-            raise LookupError('Invalid search URI field: %s' % field)
-        params.append(uri)
-    if filters:
-        sql = 'SELECT * FROM (%s) WHERE %s' % (sql, ' OR '.join(filters))
-    logger.debug('SQL query: %r, %r', sql, params)
-    result = c.execute(sql + ' LIMIT ? OFFSET ?', params + [limit, offset])
-    logger.debug('SQL query result: %r', result)
-    return map(_track, result)
-
-
-def insert_artists(c, artists):
-    if not artists:
-        return None
-    if len(artists) != 1:
-        logger.warn('Ignoring multiple artists: %r', artists)
-    artist = list(artists)[0]
-    c.execute(_sqlstr('INSERT OR REPLACE INTO artist VALUES (%s)', 3), (
-        artist.uri,
-        artist.name,
-        artist.musicbrainz_id
-        ))
-    return artist.uri
-
-
-def insert_album(c, album):
-    if not album or not album.name:
-        return None
-    c.execute(_sqlstr('INSERT OR REPLACE INTO album VALUES (%s)', 8), (
-        album.uri,
-        album.name,
-        insert_artists(c, album.artists),
-        album.num_tracks,
-        album.num_discs,
-        album.date,
-        album.musicbrainz_id,
-        ' '.join(album.images) if album.images else None
-        ))
-    return album.uri
-
-
-def insert_track(c, track):
-    c.execute(_sqlstr('INSERT OR REPLACE INTO track VALUES (%s)', 15), (
-        track.uri,
-        track.name,
-        insert_album(c, track.album),
-        insert_artists(c, track.artists),
-        insert_artists(c, track.composers),
-        insert_artists(c, track.performers),
-        track.genre,
-        track.track_no,
-        track.disc_no,
-        track.date,
-        track.length,
-        track.bitrate,
-        track.comment,
-        track.musicbrainz_id,
-        track.last_modified
-        ))
-    return track.uri
-
-
-def delete_track(c, uri):
-    c.execute('DELETE FROM track WHERE uri = ?', (uri,))
-
-
-def cleanup(c):
-    c.executescript("""
-    DELETE FROM album WHERE NOT EXISTS (
-        SELECT uri FROM track WHERE track.album = album.uri
-    );
-    DELETE FROM artist WHERE NOT EXISTS (
-        SELECT uri FROM track WHERE track.artists = artist.uri
-         UNION
-        SELECT uri FROM track WHERE track.composers = artist.uri
-         UNION
-        SELECT uri FROM track WHERE track.performers = artist.uri
-         UNION
-        SELECT uri FROM album WHERE album.artists = artist.uri
-    );
-    """)
-
-
-def clear(c):
-    c.executescript("""
-    DELETE FROM track;
-    DELETE FROM album;
-    DELETE FROM artist;
-    VACUUM;
-    """)
-
-
-class Row(sqlite3.Row):
-
-    def __getattr__(self, name):
-        return self[name]
-
-
-class Connection(sqlite3.Connection):
-
-    def __init__(self, *args, **kwargs):
-        logger.debug('Creating SQLite connection')
-        sqlite3.Connection.__init__(self, *args, **kwargs)
-        self.row_factory = Row

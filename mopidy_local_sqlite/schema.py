@@ -157,16 +157,16 @@ def browse(c, type, role=None, order=('name',), **kwargs):
     return [Ref(type=type, uri=row.uri, name=row.name) for row in rows]
 
 
-def search_tracks(c, query, limit, offset, exact, filters=[]):
+def search_tracks(c, query, limit, offset, exact, **kwargs):
     if not query:
         sql, params = ('SELECT * FROM tracks', [])
     elif exact:
         sql, params = _make_indexed_query(query)
     else:
         sql, params = _make_fulltext_query(query)
-    if filters:
-        filters, fparams = _make_filters('track', filters)
-        sql = 'SELECT * FROM (%s) WHERE %s' % (sql, ' OR '.join(filters))
+    if kwargs:
+        filters, fparams = _make_filters('track', kwargs.iteritems())
+        sql = 'SELECT * FROM (%s) WHERE %s' % (sql, ' AND '.join(filters))
         params.extend(fparams)
     logger.debug('SQLite query: %s %r', sql, params)
     rows = c.execute(sql + ' LIMIT ? OFFSET ?', params + [limit, offset])

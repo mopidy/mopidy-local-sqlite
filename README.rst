@@ -31,10 +31,13 @@ Configuration
 ------------------------------------------------------------------------
 
 Before starting Mopidy, you must change your configuration to switch
-to using Mopidy-Local-SQLite as your preferred local library::
+to using Mopidy-Local-SQLite as your preferred local library.  It is
+also recommended to change the default ``scan_flush_threshold``, to
+improve database access during a local scan::
 
     [local]
     library = sqlite
+    scan_flush_threshold = 100
 
 Once this has been set you need to re-scan your library to populate
 the database::

@@ -101,6 +101,10 @@ Project Resources
     :target: https://pypi.python.org/pypi/Mopidy-Local-SQLite/
     :alt: Number of PyPI downloads
 
+.. image:: http://img.shields.io/travis/tkem/mopidy-local-sqlite.svg?style=flat
+    :target: https://travis-ci.org/tkem/mopidy-local-sqlite/
+    :alt: Travis CI build status
+
 - `Issue Tracker`_
 - `Source Code`_
 - `Change Log`_

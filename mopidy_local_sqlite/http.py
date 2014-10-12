@@ -13,7 +13,10 @@ class IndexHandler(tornado.web.RequestHandler):
         self._images = images
 
     def get(self, path):
-        return self.render('index.html', images=self._images.uris())
+        if self._images:
+            return self.render('index.html', images=self._images.uris())
+        else:
+            return self.render('index.html', images=None)
 
     def get_template_path(self):
         return os.path.join(os.path.dirname(__file__), 'www')
@@ -22,9 +25,15 @@ class IndexHandler(tornado.web.RequestHandler):
 def factory(config, core):
     from . import Extension
     from .images import ImageDirectory
-    logger.info('Starting %s Image Server', Extension.dist_name)
-    images = ImageDirectory(config)
 
+    if not config[Extension.ext_name]['extract_images']:
+        return [(r'/(index.html)?', IndexHandler, {'images': None})]
+    try:
+        images = ImageDirectory(config)
+    except Exception as e:
+        # FIXME: workaround for issue #30 (local not enabled)
+        return [(r'/(index.html)?', IndexHandler, {'images': None})]
+    logger.info('Starting %s Image Server', Extension.dist_name)
     return [
         (r'/(index.html)?', IndexHandler, {'images': images}),
         (r'/images/(.*)', tornado.web.StaticFileHandler, {'path': images.root})

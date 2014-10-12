@@ -32,8 +32,7 @@ class ImageDirectory(object):
         if not track.album:
             return track  # cannot add images w/o album
         path = local_track_uri_to_path(track.uri, self._media_dir)
-        uri = path_to_uri(os.path.join(self._media_dir, path))
-        data = self._scanner.scan(uri)
+        data = self._scanner.scan(path_to_uri(path))
 
         images = []
         for image in data['tags'].get('image', []):

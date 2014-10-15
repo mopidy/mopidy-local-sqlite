@@ -113,41 +113,48 @@ class SchemaTest(unittest.TestCase):
 
     def test_browse_artists(self):
         with self.connection as c:
-            result = schema.browse(c, Ref.ARTIST)
+            result = list(schema.browse(c, Ref.ARTIST))
             self.assertEqual(len(self.artists), len(result))
 
-            result = schema.browse(c, Ref.ARTIST, role='artist')
+            result = list(schema.browse(c, Ref.ARTIST, role='artist'))
             self.assertEqual(2, len(result))
 
-            result = schema.browse(c, Ref.ARTIST, role='composer')
+            result = list(schema.browse(c, Ref.ARTIST, role='composer'))
             self.assertEqual(1, len(result))
 
-            result = schema.browse(c, Ref.ARTIST, role='performer')
+            result = list(schema.browse(c, Ref.ARTIST, role='performer'))
             self.assertEqual(1, len(result))
 
     def test_browse_albums(self):
         with self.connection as c:
             result = schema.browse(c, Ref.ALBUM)
+            result = list(result)
             self.assertEqual(len(self.albums), len(result))
 
             result = schema.browse(c, Ref.ALBUM, artist=self.artists[0].uri)
+            result = list(result)
             self.assertEqual(1, len(result))
 
     def test_browse_tracks(self):
         with self.connection as c:
             result = schema.browse(c, Ref.TRACK)
+            result = list(result)
             self.assertEqual(len(self.tracks), len(result))
 
             result = schema.browse(c, Ref.TRACK, artist=self.artists[0].uri)
+            result = list(result)
             self.assertEqual(2, len(result))
 
             result = schema.browse(c, Ref.TRACK, artist=self.artists[1].uri)
+            result = list(result)
             self.assertEqual(1, len(result))
 
             result = schema.browse(c, Ref.TRACK, composer=self.artists[0].uri)
+            result = list(result)
             self.assertEqual(1, len(result))
 
             result = schema.browse(c, Ref.TRACK, performer=self.artists[0].uri)
+            result = list(result)
             self.assertEqual(1, len(result))
 
     def test_delete(self):

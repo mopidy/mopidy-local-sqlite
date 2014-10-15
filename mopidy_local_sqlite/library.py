@@ -13,8 +13,8 @@ from mopidy.models import Ref, SearchResult
 from . import Extension, schema
 
 _BROWSE_DIR = {
-    'track': lambda c, q: schema.browse(c, Ref.TRACK),
-    'album': lambda c, q: schema.browse(c, Ref.ALBUM),
+    'track': lambda c, q: list(schema.browse(c, Ref.TRACK)),
+    'album': lambda c, q: list(schema.browse(c, Ref.ALBUM)),
     'artist': lambda c, q: [
         ref.copy(type=Ref.DIRECTORY, uri=ref.uri+'?role='+q['role'][0])
         for ref in schema.browse(c, Ref.ARTIST, role=q['role'][0])
@@ -37,12 +37,12 @@ _URI_FILTERS = {
         parts.getquerydict().get('role', ['artist'])[0]:
         'local:%s' % parts.path
     },
-    'genre': lambda parts: {
-        'genre': parts.getpath().partition(':')[2]
-    },
-    'date': lambda parts: {
-        'date': parts.getpath().partition(':')[2]
-    }
+    'genre': lambda parts: dict(
+        parts.getquerylist(), genre=parts.getpath().partition(':')[2]
+    ),
+    'date': lambda parts: dict(
+        parts.getquerylist(), date=parts.getpath().partition(':')[2]
+    )
 }
 
 _TRACK_URI_RE = re.compile(r'local:track:(.*/)?([^.]+)(\..*)?\Z')
@@ -91,6 +91,7 @@ class SQLiteLibrary(local.Library):
                 return self._browse(uri)
         except Exception as e:
             logger.error('Error browsing %s: %s', uri, e)
+            raise
         return []
 
     def search(self, query=None, limit=100, offset=0, uris=None, exact=False):
@@ -166,21 +167,22 @@ class SQLiteLibrary(local.Library):
 
     def _browse_album(self, uri, order=('disc_no', 'track_no', 'name')):
         parts = uritools.urisplit(uri)
-        kwargs = {'album': 'local:%s' % parts.path}
-        for key, values in parts.getquerydict().items():
-            kwargs[key] = values[0]
-        return schema.browse(self._connect(), Ref.TRACK, order=order, **kwargs)
+        album = uritools.uriunsplit(parts[0:3] + (None, None))
+        kwargs = dict(parts.getquerylist(), album=album)
+        return list(
+            schema.browse(self._connect(), Ref.TRACK, order=order, **kwargs)
+        )
 
     def _browse(self, uri):
         filters = self._filters(uri)
-        query = '&'.join('='.join(item) for item in filters.items())
-        connection = self._connect()
-        albums = [
-            ref.copy(uri=ref.uri+'?'+query)
-            for ref in schema.browse(connection, Ref.ALBUM, **filters)
-        ]
-        tracks = schema.browse(connection, Ref.TRACK, album=None, **filters)
-        return albums + tracks
+        query = '?' + '&'.join('='.join(item) for item in filters.items())
+        refs = []
+        for ref in schema.browse(self._connect(), **filters):
+            if ref.type != Ref.TRACK:
+                refs.append(ref.copy(uri=uritools.urijoin(ref.uri, query)))
+            else:
+                refs.append(ref)
+        return refs
 
     def _search(self, query, limit, offset, exact, uri):
         return schema.search_tracks(

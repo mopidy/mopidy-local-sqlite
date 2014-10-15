@@ -22,7 +22,7 @@ Mopidy-Local-SQLite.
 Installation
 ------------------------------------------------------------------------
 
-Install by running::
+Mopidy-Local-SQLite can be installed using pip_ by running::
 
     pip install Mopidy-Local-SQLite
 
@@ -131,6 +131,8 @@ affected by this.
 .. _SQLite: http://www.sqlite.org/
 .. _FTS: http://www.sqlite.org/fts3.html
 .. _some clients: https://github.com/martijnboland/moped/issues/17
+
+.. _pip: https://pip.pypa.io/en/latest/
 
 .. _Issue Tracker: https://github.com/tkem/mopidy-local-sqlite/issues/
 .. _Source Code: https://github.com/tkem/mopidy-local-sqlite/

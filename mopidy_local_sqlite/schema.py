@@ -8,13 +8,32 @@ import sqlite3
 
 from mopidy.models import Artist, Album, Track, Ref
 
-_FILTER_MAPPINGS = {
+_BROWSE_FILTERS = {
+    None: {
+        'album': 'track.album = ?',
+        'artist': 'track.artists = ?',
+        'composer': 'track.composers = ?',
+        'performer': 'track.performers = ?',
+        'genre': 'track.genre = ?',
+        'date': "track.date LIKE ? || '%'"
+    },
     Ref.ARTIST: {
+        'artist': """
+        EXISTS (SELECT * FROM track WHERE track.artists = artist.uri)
+            OR
+        EXISTS (SELECT * FROM album WHERE album.artists = artist.uri)
+        """,
+        'composer': """
+        EXISTS (SELECT * FROM track WHERE track.composers = artist.uri)
+        """,
+        'performer': """
+        EXISTS (SELECT * FROM track WHERE track.performers = artist.uri)
+        """,
     },
     Ref.ALBUM: {
         'artist': """
         ? IN (
-            SELECT album.artist_uri
+            SELECT artists
              UNION
             SELECT artists FROM track WHERE album = album.uri
         )
@@ -35,20 +54,33 @@ _FILTER_MAPPINGS = {
         """
     },
     Ref.TRACK: {
-        'album': 'album_uri = ?',
-        '!album': 'album_uri IS NULL',
-        'artist': '? IN (artist_uri, albumartist_uri)',
-        '!artist': '(artist_uri IS NULL AND albumartist_uri IS NULL)',
-        'composer': 'composer_uri = ?',
-        '!composer': 'composer_uri IS NULL',
-        'performer': 'performer_uri = ?',
-        '!performer': 'performer_uri IS NULL',
+        'album': 'album = ?',
+        'artist': """
+        ? IN (
+            SELECT artists
+             UNION
+            SELECT artists FROM album WHERE uri = track.album
+        )
+        """,
+        'composer': 'composers = ?',
+        'performer': 'performers = ?',
         'genre': 'genre = ?',
-        '!genre': 'genre IS NULL',
-        'date': "date LIKE ? || '%'",
-        '!date': "date IS NULL"
+        'date': "date LIKE ? || '%'"
     }
 }
+
+_BROWSE_SQL = """
+SELECT CASE WHEN album.uri IS NULL THEN 'track' ELSE 'album' END AS type,
+       coalesce(album.uri, track.uri) AS uri,
+       coalesce(album.name, track.name) AS name
+  FROM track LEFT OUTER JOIN album ON track.album = album.uri
+"""
+
+_BROWSE_ALBUMARTIST_SQL = """
+SELECT 'album' AS type, uri AS uri, name AS name
+  FROM album
+ WHERE album.artists = ?
+"""
 
 _SEARCH_FIELDS = {
     'uri',
@@ -62,6 +94,15 @@ _SEARCH_FIELDS = {
     'track_no',
     'date',
     'comment'
+}
+
+_SEARCH_FILTERS = {
+    'album': 'album_uri = ?',
+    'artist': '? IN (artist_uri, albumartist_uri)',
+    'composer': 'composer_uri = ?',
+    'performer': 'performer_uri = ?',
+    'genre': 'genre = ?',
+    'date': "date LIKE ? || '%'"
 }
 
 _SEARCH_SQL = """
@@ -145,16 +186,25 @@ def lookup(c, uri):
         return None
 
 
-def browse(c, type, role=None, order=('name',), **kwargs):
-    sql = "SELECT uri, name FROM %ss AS %s" % (role or type, type)
-    filters, params = _make_filters(type, kwargs.iteritems())
+def browse(c, type=None, order=('type', 'name'), **kwargs):
+    if type:
+        sql = "SELECT '%s' AS type, uri, name FROM %s" % (type, type)
+    else:
+        sql = _BROWSE_SQL
+    filters, params = _make_filters(_BROWSE_FILTERS[type], **kwargs)
     if filters:
         sql += ' WHERE %s' % ' AND '.join(filters)
+    if not type:
+        sql += ' GROUP BY coalesce(album.uri, track.uri)'
+        # as of sqlite v3.8.2, a UNION seems to be considerably faster
+        # than a WHERE clause spanning multiple tables in a JOIN
+        if 'artist' in kwargs:
+            sql = ' UNION '.join((sql, _BROWSE_ALBUMARTIST_SQL))
+            params.append(kwargs['artist'])
     if order:
         sql += ' ORDER BY %s' % ', '.join(order)
     logger.debug('SQLite query: %s %r', sql, params)
-    rows = c.execute(sql, params)
-    return [Ref(type=type, uri=row.uri, name=row.name) for row in rows]
+    return itertools.imap(_ref, c.execute(sql, params))  # imap?
 
 
 def search_tracks(c, query, limit, offset, exact, **kwargs):
@@ -165,7 +215,7 @@ def search_tracks(c, query, limit, offset, exact, **kwargs):
     else:
         sql, params = _make_fulltext_query(query)
     if kwargs:
-        filters, fparams = _make_filters('track', kwargs.iteritems())
+        filters, fparams = _make_filters(_SEARCH_FILTERS, **kwargs)
         sql = 'SELECT * FROM (%s) WHERE %s' % (sql, ' AND '.join(filters))
         params.extend(fparams)
     logger.debug('SQLite query: %s %r', sql, params)
@@ -261,18 +311,13 @@ def clear(c):
     """)
 
 
-def _make_filters(type, items):
-    mapping = _FILTER_MAPPINGS[type]
+def _make_filters(mapping, role=None, **kwargs):
     filters, params = [], []
-    for key, value in items:
-        try:
-            if value is None:
-                filters.append(mapping['!' + key])
-            else:
-                filters.append(mapping[key])
-                params.append(value)
-        except KeyError:
-            raise ValueError('Invalid %s filter: %s' % (type, key))
+    if role:
+        filters.append(mapping[role])
+    for key, value in kwargs.items():
+        filters.append(mapping[key])
+        params.append(value)
     return (filters, params)
 
 
@@ -356,3 +401,7 @@ def _track(row):
             musicbrainz_id=row.performer_musicbrainz_id
         )]
     return Track(**kwargs)
+
+
+def _ref(row):
+    return Ref(type=row.type, uri=row.uri, name=row.name)

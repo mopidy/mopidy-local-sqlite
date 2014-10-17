@@ -23,7 +23,6 @@ class Extension(ext.Extension):
     def get_config_schema(self):
         schema = super(Extension, self).get_config_schema()
         schema['directories'] = config.List()
-        schema['encodings'] = config.List()
         schema['timeout'] = config.Integer(optional=True, minimum=1)
         schema['use_album_mbid_uri'] = config.Boolean()
         schema['use_artist_mbid_uri'] = config.Boolean()
@@ -33,6 +32,7 @@ class Extension(ext.Extension):
         schema['album_art_files'] = config.List(optional=True)
 
         # no longer used
+        schema['encodings'] = config.Deprecated()
         schema['foreign_keys'] = config.Deprecated()
         schema['hash'] = config.Deprecated()
         schema['default_image_extension'] = config.Deprecated()

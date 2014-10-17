@@ -3,8 +3,8 @@ from __future__ import unicode_literals
 import shutil
 import tempfile
 import unittest
-import urllib
 
+from mopidy.local import translator
 from mopidy.models import Track
 from mopidy_local_sqlite import library
 
@@ -33,17 +33,17 @@ class LocalLibraryProviderTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tempdir)
 
-    def test_add_noname_utf8(self):
-        name = u'Adresse d\xe9j\xe0 utilis\xe9e'
-        uri = 'local:track:%s.mp3' % urllib.quote(name.encode('utf8'))
+    def test_add_noname_ascii(self):
+        name = b'Test.mp3'
+        uri = translator.path_to_local_track_uri(name)
         self.library.begin()
         self.library.add(Track(uri=uri))
         self.library.close()
         self.assertEqual(self.library.lookup(uri).name, name)
 
-    def test_add_noname_latin1(self):
-        name = u'Adresse d\xe9j\xe0 utilis\xe9e'
-        uri = 'local:track:%s.mp3' % urllib.quote(name.encode('latin1'))
+    def test_add_noname_utf8(self):
+        name = u'Mi\xf0vikudags.mp3'
+        uri = translator.path_to_local_track_uri(name)
         self.library.begin()
         self.library.add(Track(uri=uri))
         self.library.close()

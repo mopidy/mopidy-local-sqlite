@@ -4,7 +4,6 @@ import hashlib
 import logging
 import os
 import os.path
-import re
 import sqlite3
 import uritools
 
@@ -48,8 +47,6 @@ _URI_FILTERS = {
         parts.getquerylist(), date=parts.getpath().partition(':')[2]
     )
 }
-
-_TRACK_URI_RE = re.compile(r'local:track:(.*/)?([^.]+)(\..*)?\Z')
 
 logger = logging.getLogger(__name__)
 
@@ -235,7 +232,8 @@ class SQLiteLibrary(local.Library):
         if track.name:
             name = track.name
         else:
-            name = self._decode(_TRACK_URI_RE.match(track.uri).group(2))
+            path = translator.local_track_uri_to_path(track.uri, b'')
+            name = os.path.basename(path).decode('utf-8')
         if track.album and track.album.name:
             album = self._validate_album(track.album)
         else:
@@ -256,22 +254,6 @@ class SQLiteLibrary(local.Library):
         else:
             logger.debug('Skipping search URI %s', uri)
         return {}
-
-    def _encode(self, string):
-        for encoding in self._config['encodings']:
-            try:
-                return uritools.uriencode(str(string), encoding=encoding)
-            except UnicodeError:
-                logger.debug('Not a %s string: %r', encoding, string)
-        raise UnicodeError('No matching encoding found for %r' % string)
-
-    def _decode(self, string):
-        for encoding in self._config['encodings']:
-            try:
-                return uritools.uridecode(str(string), encoding=encoding)
-            except UnicodeError:
-                logger.debug('Not a %s string: %r', encoding, string)
-        raise UnicodeError('No matching encoding found for %r' % string)
 
     def _make_uri(self, type, model):
         if model.musicbrainz_id and self._config['use_%s_mbid_uri' % type]:

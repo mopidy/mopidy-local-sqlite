@@ -186,6 +186,11 @@ def lookup(c, uri):
         return None
 
 
+def exists(c, uri):
+    rows = c.execute('SELECT EXISTS(SELECT * FROM track WHERE uri = ?)', [uri])
+    return rows.fetchone()[0]
+
+
 def browse(c, type=None, order=('type', 'name'), **kwargs):
     if type:
         sql = "SELECT '%s' AS type, uri, name FROM %s" % (type, type)

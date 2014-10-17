@@ -3,14 +3,18 @@ from __future__ import unicode_literals
 import hashlib
 import logging
 import os
+import os.path
 import re
 import sqlite3
 import uritools
 
 from mopidy import local
+from mopidy.local import translator  # FIXME: undocumented Mopidy API
 from mopidy.models import Ref, SearchResult
 
 from . import Extension, schema
+
+_DBNAME = 'library.db'
 
 _BROWSE_DIR = {
     'track': lambda c, q: list(schema.browse(c, Ref.TRACK)),
@@ -54,11 +58,12 @@ class SQLiteLibrary(local.Library):
 
     name = 'sqlite'
 
+    _connection = None
+
     def __init__(self, config):
-        data_dir = Extension.make_data_dir(config)
         self._config = ext_config = config[Extension.ext_name]
-        self._dbpath = os.path.join(data_dir, b'library.db')
-        self._connection = None
+        self._dbpath = os.path.join(Extension.make_data_dir(config), _DBNAME)
+        self._media_dir = config['local']['media_dir']
         self._directories = []
         for line in ext_config['directories']:
             name, uri = line.rsplit(None, 2)
@@ -162,8 +167,25 @@ class SQLiteLibrary(local.Library):
         return self._connection
 
     def _browse_directory(self, uri):
-        query = uritools.urisplit(uri).getquerydict()
-        return _BROWSE_DIR[query['type'][0]](self._connect(), query)
+        uriparts = uritools.urisplit(str(uri))  # FIXME: uritools.decode() ???
+        if uriparts.query:
+            query = uriparts.getquerydict()
+            return _BROWSE_DIR[query['type'][0]](self._connect(), query)
+        # browse local file system
+        root = uriparts.getpath().partition(':')[2]
+        dirs, tracks = [], []
+        for name in sorted(os.listdir(os.path.join(self._media_dir, root))):
+            path = os.path.join(root, name)
+            if os.path.isdir(os.path.join(self._media_dir, path)):
+                uri = translator.path_to_local_directory_uri(path)
+                dirs.append(Ref.directory(uri=uri, name=name))
+            else:
+                uri = translator.path_to_local_track_uri(path)
+                tracks.append(Ref.track(uri=uri, name=name))
+        # only return scanned tracks
+        with self._connect() as c:
+            tracks = [track for track in tracks if schema.exists(c, track.uri)]
+        return dirs + tracks
 
     def _browse_album(self, uri, order=('disc_no', 'track_no', 'name')):
         parts = uritools.urisplit(uri)
@@ -234,6 +256,14 @@ class SQLiteLibrary(local.Library):
         else:
             logger.debug('Skipping search URI %s', uri)
         return {}
+
+    def _encode(self, string):
+        for encoding in self._config['encodings']:
+            try:
+                return uritools.uriencode(str(string), encoding=encoding)
+            except UnicodeError:
+                logger.debug('Not a %s string: %r', encoding, string)
+        raise UnicodeError('No matching encoding found for %r' % string)
 
     def _decode(self, string):
         for encoding in self._config['encodings']:

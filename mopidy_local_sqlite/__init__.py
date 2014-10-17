@@ -27,7 +27,7 @@ class Extension(ext.Extension):
         schema['use_album_mbid_uri'] = config.Boolean()
         schema['use_artist_mbid_uri'] = config.Boolean()
         schema['extract_images'] = config.Boolean()
-        schema['image_dir'] = config.String()
+        schema['image_dir'] = config.String(optional=True)
         schema['image_base_uri'] = config.String(optional=True)
         schema['album_art_files'] = config.List(optional=True)
 
@@ -46,9 +46,12 @@ class Extension(ext.Extension):
         registry.add('http:app', {'name': 'sqlite', 'factory': factory})
 
     @classmethod
-    def make_data_dir(cls, config, *paths):
-        # Not using mopidy.utils.path.get_or_create_dir, since that's
-        # an undocumented, private Mopidy API
+    def get_data_dir(cls, config, *paths):
+        # check if Mopidy-Local is enabled
+        if 'local' not in config or 'data_dir' not in config['local']:
+            from mopidy.exceptions import ExtensionError
+            raise ExtensionError('Mopidy-Local not enabled')
+        # TODO: use mopidy.utils.path.get_or_create_dir (undocumented)
         path = os.path.join(config['local']['data_dir'], b'sqlite', *paths)
         if not os.path.isdir(path):
             logger.info('Creating directory %s', path)

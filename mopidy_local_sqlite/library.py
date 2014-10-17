@@ -59,7 +59,7 @@ class SQLiteLibrary(local.Library):
 
     def __init__(self, config):
         self._config = ext_config = config[Extension.ext_name]
-        self._dbpath = os.path.join(Extension.make_data_dir(config), _DBNAME)
+        self._dbpath = os.path.join(Extension.get_data_dir(config), _DBNAME)
         self._media_dir = config['local']['media_dir']
         self._directories = []
         for line in ext_config['directories']:
@@ -115,8 +115,12 @@ class SQLiteLibrary(local.Library):
     def add(self, track):
         try:
             track = self._validate_track(track)
-            if self._images:
-                track = self._images.add(track)
+            if self._images and track.album:
+                uri = translator.local_track_uri_to_file_uri(
+                    track.uri, self._media_dir
+                )
+                album = track.album.copy(images=self._images.scan(uri))
+                track = track.copy(album=album)
             schema.insert_track(self._connect(), track)
         except Exception as e:
             logger.warn('Skipped %s: %s', track.uri, e)

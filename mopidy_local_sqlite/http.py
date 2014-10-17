@@ -30,9 +30,9 @@ def factory(config, core):
         return [(r'/(index.html)?', IndexHandler, {'images': None})]
     try:
         images = ImageDirectory(config)
-    except Exception:
-        # FIXME: workaround for issue #30 (local not enabled)
-        return [(r'/(index.html)?', IndexHandler, {'images': None})]
+    except Exception as e:
+        logger.error('Cannot start %s: %s', Extension.dist_name, e)
+        return []
     logger.info('Starting %s Image Server', Extension.dist_name)
     return [
         (r'/(index.html)?', IndexHandler, {'images': images}),

@@ -16,8 +16,8 @@ from . import Extension, schema
 _DBNAME = 'library.db'
 
 _BROWSE_DIR = {
-    'track': lambda c, q: list(schema.browse(c, Ref.TRACK)),
-    'album': lambda c, q: list(schema.browse(c, Ref.ALBUM)),
+    'track': lambda c, q: schema.browse(c, Ref.TRACK),
+    'album': lambda c, q: schema.browse(c, Ref.ALBUM),
     'artist': lambda c, q: [
         ref.copy(type=Ref.DIRECTORY, uri=ref.uri+'?role='+q['role'][0])
         for ref in schema.browse(c, Ref.ARTIST, role=q['role'][0])
@@ -33,6 +33,9 @@ _BROWSE_DIR = {
 }
 
 _URI_FILTERS = {
+    'directory': lambda parts: dict(
+        glob='local:track:%s/*' % parts.path.partition(':')[2]
+    ) if parts.path.partition(':')[2] else {},
     'album': lambda parts: dict(
         parts.getquerylist(), album='local:%s' % parts.path
     ),
@@ -192,9 +195,7 @@ class SQLiteLibrary(local.Library):
         parts = uritools.urisplit(uri)
         album = uritools.uriunsplit(parts[0:3] + (None, None))
         kwargs = dict(parts.getquerylist(), album=album)
-        return list(
-            schema.browse(self._connect(), Ref.TRACK, order=order, **kwargs)
-        )
+        return schema.browse(self._connect(), Ref.TRACK, order=order, **kwargs)
 
     def _browse(self, uri):
         filters = self._filters(uri)
@@ -251,6 +252,7 @@ class SQLiteLibrary(local.Library):
         )
 
     def _filters(self, uri):
+        logger.debug('Search URI: %s', uri)
         parts = uritools.urisplit(uri)
         type, _, _ = parts.path.partition(':')
         if type in _URI_FILTERS:

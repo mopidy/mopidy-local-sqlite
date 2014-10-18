@@ -113,8 +113,10 @@ class SchemaTest(unittest.TestCase):
 
     def test_browse_artists(self):
         with self.connection as c:
-            result = list(schema.browse(c, Ref.ARTIST))
-            self.assertEqual(len(self.artists), len(result))
+            self.assertItemsEqual(
+                map(lambda m: m.uri, self.artists),
+                map(lambda m: m.uri, schema.browse(c, Ref.ARTIST))
+            )
 
             result = list(schema.browse(c, Ref.ARTIST, role='artist'))
             self.assertEqual(2, len(result))
@@ -127,9 +129,10 @@ class SchemaTest(unittest.TestCase):
 
     def test_browse_albums(self):
         with self.connection as c:
-            result = schema.browse(c, Ref.ALBUM)
-            result = list(result)
-            self.assertEqual(len(self.albums), len(result))
+            self.assertItemsEqual(
+                map(lambda m: m.uri, self.albums),
+                map(lambda m: m.uri, schema.browse(c, Ref.ALBUM))
+            )
 
             result = schema.browse(c, Ref.ALBUM, artist=self.artists[0].uri)
             result = list(result)
@@ -137,9 +140,10 @@ class SchemaTest(unittest.TestCase):
 
     def test_browse_tracks(self):
         with self.connection as c:
-            result = schema.browse(c, Ref.TRACK)
-            result = list(result)
-            self.assertEqual(len(self.tracks), len(result))
+            self.assertItemsEqual(
+                map(lambda m: m.uri, self.tracks),
+                map(lambda m: m.uri, schema.browse(c, Ref.TRACK))
+            )
 
             result = schema.browse(c, Ref.TRACK, artist=self.artists[0].uri)
             result = list(result)

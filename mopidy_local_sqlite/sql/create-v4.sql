@@ -2,7 +2,7 @@
 
 BEGIN EXCLUSIVE TRANSACTION;
 
-PRAGMA user_version = 3;                -- schema version for upgrade
+PRAGMA user_version = 4;                -- schema version for upgrade
 
 CREATE TABLE artist (
     uri             TEXT PRIMARY KEY,   -- artist URI
@@ -46,6 +46,7 @@ CREATE TABLE track (
 
 CREATE INDEX album_name_index           ON album (name);
 CREATE INDEX album_artists_index        ON album (artists);
+CREATE INDEX album_date_index           ON album (date);
 CREATE INDEX artist_name_index          ON artist (name);
 CREATE INDEX track_name_index           ON track (name);
 CREATE INDEX track_album_index          ON track (album);
@@ -53,6 +54,8 @@ CREATE INDEX track_artists_index        ON track (artists);
 CREATE INDEX track_composers_index      ON track (composers);
 CREATE INDEX track_performers_index     ON track (performers);
 CREATE INDEX track_genre_index          ON track (genre);
+CREATE INDEX track_track_no_index       ON track (track_no);
+CREATE INDEX track_date_index           ON track (date);
 CREATE INDEX track_comment_index        on track (comment);
 
 -- Convenience views
@@ -70,22 +73,6 @@ SELECT album.uri                        AS uri,
        album.images                     AS images
   FROM album
   LEFT OUTER JOIN artist                ON album.artists = artist.uri;
-
-CREATE VIEW artists AS
-SELECT uri, name, musicbrainz_id
-  FROM artist
- WHERE EXISTS (SELECT * FROM album WHERE album.artists = artist.uri)
-    OR EXISTS (SELECT * FROM track WHERE track.artists = artist.uri);
-
-CREATE VIEW composers AS
-SELECT uri, name, musicbrainz_id
-  FROM artist
- WHERE EXISTS (SELECT * FROM track WHERE track.composers = artist.uri);
-
-CREATE VIEW performers AS
-SELECT uri, name, musicbrainz_id
-  FROM artist
- WHERE EXISTS (SELECT * FROM track WHERE track.performers = artist.uri);
 
 CREATE VIEW tracks AS
 SELECT track.rowid                      AS docid,

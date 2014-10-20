@@ -16,81 +16,73 @@ _BROWSE_QUERIES = {
       FROM track LEFT OUTER JOIN album ON track.album = album.uri
      WHERE %%s
      GROUP BY coalesce(album.uri, track.uri)
+     ORDER BY %%s
     """ % (Ref.TRACK, Ref.ALBUM),
     Ref.ALBUM: """
     SELECT '%s' AS type, uri AS uri, name AS name
       FROM album
      WHERE %%s
+     ORDER BY %%s
     """ % Ref.ALBUM,
     Ref.ARTIST: """
     SELECT '%s' AS type, uri AS uri, name AS name
       FROM artist
      WHERE %%s
+     ORDER BY %%s
     """ % Ref.ARTIST,
     Ref.TRACK: """
     SELECT '%s' AS type, uri AS uri, name AS name
       FROM track
      WHERE %%s
+     ORDER BY %%s
     """ % Ref.TRACK
 }
 
 _BROWSE_FILTERS = {
-    None: {
-        'album': 'track.album = ?',
-        'artist': 'track.artists = ?',
-        'composer': 'track.composers = ?',
-        'performer': 'track.performers = ?',
-        'genre': 'track.genre = ?',
-        'date': "track.date LIKE ? || '%'"
-    },
-    Ref.ARTIST: {
-        'artist': """
-        EXISTS (SELECT * FROM track WHERE track.artists = artist.uri)
-            OR
-        EXISTS (SELECT * FROM album WHERE album.artists = artist.uri)
-        """,
-        'composer': """
-        EXISTS (SELECT * FROM track WHERE track.composers = artist.uri)
-        """,
-        'performer': """
-        EXISTS (SELECT * FROM track WHERE track.performers = artist.uri)
-        """,
-    },
-    Ref.ALBUM: {
-        'artist': """
-        ? IN (
-            SELECT artists
-             UNION
-            SELECT artists FROM track WHERE album = album.uri
-        )
-        """,
-        'composer': """
-        ? IN (SELECT composers FROM track WHERE album = album.uri)
-        """,
-        'date': """
-        EXISTS (
+    None: dict(
+        album='track.album = ?',
+        albumartist='album.artists = ?',
+        artist='track.artists = ?',
+        composer='track.composers = ?',
+        date="track.date LIKE ? || '%'",
+        genre='track.genre = ?',
+        performer='track.performers = ?'
+    ),
+    Ref.ARTIST: dict(
+        role={
+            'albumartist': """EXISTS (
+                SELECT * FROM album WHERE album.artists = artist.uri
+            )""",
+            'artist': """EXISTS (
+                SELECT * FROM track WHERE track.artists = artist.uri
+            )""",
+            'composer': """EXISTS (
+                SELECT * FROM track WHERE track.composers = artist.uri
+            )""",
+            'performer': """EXISTS (
+                SELECT * FROM track WHERE track.performers = artist.uri
+            )"""
+        },
+    ),
+    Ref.ALBUM: dict(
+        albumartist='artists = ?',
+        artist='? IN (SELECT artists FROM track WHERE album = album.uri)',
+        composer='? IN (SELECT composers FROM track WHERE album = album.uri)',
+        date="""EXISTS (
             SELECT * FROM track WHERE album = album.uri AND date LIKE ? || '%'
-        )
-        """,
-        'genre': """
-        ? IN (SELECT genre FROM track WHERE album = album.uri)
-        """,
-        'performer': """
-        ? IN (SELECT performers FROM track WHERE album = album.uri)
-        """
-    },
-    Ref.TRACK: {
-        'album': 'album = ?',
-        'artist': """? IN (
-            SELECT artists
-             UNION
-            SELECT artists FROM album WHERE uri = track.album
         )""",
-        'composer': 'composers = ?',
-        'date': "date LIKE ? || '%'",
-        'genre': 'genre = ?',
-        'performer': 'performers = ?'
-    }
+        genre='? IN (SELECT genre FROM track WHERE album = album.uri)',
+        performer='? IN (SELECT performers FROM track WHERE album = album.uri)'
+    ),
+    Ref.TRACK: dict(
+        album='album = ?',
+        albumartist='? IN (SELECT artists FROM album WHERE uri = track.album)',
+        artist='artists = ?',
+        composer='composers = ?',
+        date="date LIKE ? || '%'",
+        genre='genre = ?',
+        performer='performers = ?'
+    )
 }
 
 _SEARCH_SQL = """
@@ -101,12 +93,14 @@ SELECT *
 
 _SEARCH_FILTERS = {
     'album': 'album_uri = ?',
-    'artist': '? IN (artist_uri, albumartist_uri)',
+    'albumartist': 'albumartist_uri = ?',
+    'artist': 'artist_uri = ?',
     'composer': 'composer_uri = ?',
-    'performer': 'performer_uri = ?',
-    'genre': 'genre = ?',
     'date': "date LIKE ? || '%'",
-    'glob': 'uri GLOB ?'
+    'genre': 'genre = ?',
+    'mtime': "datetime(last_motified, 'unixepoch') LIKE ? || '%'",
+    'performer': 'performer_uri = ?',
+    'uri': 'uri GLOB ?',
 }
 
 _SEARCH_FIELDS = {
@@ -123,7 +117,7 @@ _SEARCH_FIELDS = {
     'comment'
 }
 
-schema_version = 3
+schema_version = 4
 
 logger = logging.getLogger(__name__)
 
@@ -142,16 +136,16 @@ class Connection(sqlite3.Connection):
 
 
 def load(c):
-    scripts_dir = os.path.join(os.path.dirname(__file__), b'scripts')
+    sql_dir = os.path.join(os.path.dirname(__file__), b'sql')
     user_version = c.execute('PRAGMA user_version').fetchone()[0]
     if not user_version:
         logger.info('Creating SQLite database schema v%s', schema_version)
-        script = os.path.join(scripts_dir, 'create-v%s.sql' % schema_version)
+        script = os.path.join(sql_dir, 'create-v%s.sql' % schema_version)
         c.executescript(open(script).read())
         user_version = c.execute('PRAGMA user_version').fetchone()[0]
     while user_version != schema_version:
         logger.info('Upgrading SQLite database schema v%s', user_version)
-        script = os.path.join(scripts_dir, 'upgrade-v%s.sql' % user_version)
+        script = os.path.join(sql_dir, 'upgrade-v%s.sql' % user_version)
         c.executescript(open(script).read())
         user_version = c.execute('PRAGMA user_version').fetchone()[0]
     return user_version
@@ -202,29 +196,32 @@ def exists(c, uri):
 
 def browse(c, type=None, order=('type', 'name'), **kwargs):
     filters, params = _filters(_BROWSE_FILTERS[type], **kwargs)
-    sql = _BROWSE_QUERIES[type] % (' AND '.join(filters) or '1')
-    # TODO: more generic artist/albumartist handling?
-    if not type and 'artist' in kwargs:
-        sql += ' UNION ' + _BROWSE_QUERIES[Ref.ALBUM] % 'artists = ?'
-        params.append(kwargs['artist'])
-    if order:
-        sql += ' ORDER BY %s' % ', '.join(order)
-    logger.debug('SQLite browse query: %s %r', sql, params)
+    sql = _BROWSE_QUERIES[type] % (
+        ' AND '.join(filters) or '1',
+        ', '.join(order)
+    )
+    logger.debug('SQLite browse query %r: %s', params, sql)
     return [Ref(**row) for row in c.execute(sql, params)]
 
 
-def search_tracks(c, query, limit, offset, exact, **kwargs):
+def search_tracks(c, query, limit, offset, exact, filters=[]):
     if not query:
-        sql, params = ('SELECT * FROM tracks', [])
+        sql, params = ('SELECT * FROM tracks WHERE 1', [])
     elif exact:
         sql, params = _indexed_query(query)
     else:
         sql, params = _fulltext_query(query)
-    if kwargs:
-        filters, fparams = _filters(_SEARCH_FILTERS, **kwargs)
-        sql = 'SELECT * FROM (%s) WHERE %s' % (sql, ' AND '.join(filters))
-        params.extend(fparams)
-    logger.debug('SQLite search query: %s %r', sql, params)
+    clauses = []
+    for kwargs in filters:
+        f, p = _filters(_SEARCH_FILTERS, **kwargs)
+        if f:
+            clauses.append('(%s)' % ' AND '.join(f))
+            params.extend(p)
+        else:
+            logger.debug('Skipped SQLite search filter %r', kwargs)
+    if clauses:
+        sql += ' AND (%s)' % ' OR '.join(clauses)
+    logger.debug('SQLite search query %r: %s', params, sql)
     rows = c.execute(sql + ' LIMIT ? OFFSET ?', params + [limit, offset])
     return map(_track, rows)
 
@@ -329,11 +326,18 @@ def _insert(c, table, params):
 
 def _filters(mapping, role=None, **kwargs):
     filters, params = [], []
-    if role:
-        filters.append(mapping[role])
+    if role and 'role' in mapping:
+        rolemap = mapping['role']
+        if isinstance(role, basestring):
+            filters.append(rolemap[role])
+        else:
+            filters.append(' OR '.join(rolemap[r] for r in role))
     for key, value in kwargs.items():
-        filters.append(mapping[key])
-        params.append(value)
+        if key in mapping:
+            filters.append(mapping[key])
+            params.append(value)
+        else:
+            logger.debug('Skipped SQLite filter expression: %s=%r', key, value)
     return (filters, params)
 
 

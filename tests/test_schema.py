@@ -1,3 +1,4 @@
+# flake8: noqa
 from __future__ import unicode_literals
 
 import sqlite3
@@ -56,42 +57,42 @@ class SchemaTest(unittest.TestCase):
             (
                 map(lambda t: t.uri, self.tracks),
                 [],
-                {}
+                []
             ),
             (
                 [],
                 [('any', 'none')],
-                {}
+                []
             ),
             (
                 [self.tracks[1].uri, self.tracks[3].uri, self.tracks[4].uri],
                 [('any', self.artists[0].name)],
-                {}
+                []
             ),
             (
                 [self.tracks[3].uri],
                 [('any', self.artists[0].name)],
-                {'album': self.albums[1].uri},
+                [{'album': self.albums[1].uri}],
             ),
             (
                 [self.tracks[2].uri],
                 [('album', self.tracks[2].album.name)],
-                {},
+                [],
             ),
             (
                 [self.tracks[1].uri],
                 [('artist', next(iter(self.tracks[1].artists)).name)],
-                {},
+                [],
             ),
             (
                 [self.tracks[0].uri],
                 [('track_name', self.tracks[0].name)],
-                {}
+                []
             ),
         ]:
             for exact in (True, False):
                 with self.connection as c:
-                    tracks = schema.search_tracks(c, query, 10, 0, exact, **filters)  # noqa
+                    tracks = schema.search_tracks(c, query, 10, 0, exact, filters)
                 self.assertItemsEqual(results, map(lambda t: t.uri, tracks))
 
     def test_fulltext_search(self):
@@ -99,16 +100,16 @@ class SchemaTest(unittest.TestCase):
             (
                 map(lambda t: t.uri, self.tracks),
                 [('track_name', 'track')],
-                {}
+                []
             ),
             (
                 [self.tracks[1].uri, self.tracks[3].uri],
                 [('track_name', 'track')],
-                {'artist': self.artists[0].uri}
+                [{'artist': self.artists[0].uri}, {'albumartist': self.artists[0].uri}]
             ),
         ]:
             with self.connection as c:
-                tracks = schema.search_tracks(c, query, 10, 0, False, **filters)  # noqa
+                tracks = schema.search_tracks(c, query, 10, 0, False, filters)
             self.assertItemsEqual(results, map(lambda t: t.uri, tracks))
 
     def test_browse_artists(self):
@@ -117,15 +118,26 @@ class SchemaTest(unittest.TestCase):
                 map(lambda m: m.uri, self.artists),
                 map(lambda m: m.uri, schema.browse(c, Ref.ARTIST))
             )
-
-            result = list(schema.browse(c, Ref.ARTIST, role='artist'))
-            self.assertEqual(2, len(result))
-
-            result = list(schema.browse(c, Ref.ARTIST, role='composer'))
-            self.assertEqual(1, len(result))
-
-            result = list(schema.browse(c, Ref.ARTIST, role='performer'))
-            self.assertEqual(1, len(result))
+            self.assertItemsEqual(
+                map(lambda m: m.uri, self.artists),
+                map(lambda m: m.uri, schema.browse(c, Ref.ARTIST, role=['artist', 'albumartist']))
+            )
+            self.assertItemsEqual(
+                map(lambda m: m.uri, [self.artists[0]]),
+                map(lambda m: m.uri, schema.browse(c, Ref.ARTIST, role='artist'))
+            )
+            self.assertItemsEqual(
+                map(lambda m: m.uri, [self.artists[0]]),
+                map(lambda m: m.uri, schema.browse(c, Ref.ARTIST, role='composer'))
+            )
+            self.assertItemsEqual(
+                map(lambda m: m.uri, [self.artists[0]]),
+                map(lambda m: m.uri, schema.browse(c, Ref.ARTIST, role='performer'))
+            )
+            self.assertItemsEqual(
+                map(lambda m: m.uri, self.artists),
+                map(lambda m: m.uri, schema.browse(c, Ref.ARTIST, role='albumartist'))
+            )
 
     def test_browse_albums(self):
         with self.connection as c:
@@ -133,10 +145,14 @@ class SchemaTest(unittest.TestCase):
                 map(lambda m: m.uri, self.albums),
                 map(lambda m: m.uri, schema.browse(c, Ref.ALBUM))
             )
-
-            result = schema.browse(c, Ref.ALBUM, artist=self.artists[0].uri)
-            result = list(result)
-            self.assertEqual(1, len(result))
+            self.assertItemsEqual(
+                map(lambda m: m.uri, []),
+                map(lambda m: m.uri, schema.browse(c, Ref.ALBUM, artist=self.artists[0].uri))
+            )
+            self.assertItemsEqual(
+                map(lambda m: m.uri, [self.albums[1]]),
+                map(lambda m: m.uri, schema.browse(c, Ref.ALBUM, albumartist=self.artists[0].uri))
+            )
 
     def test_browse_tracks(self):
         with self.connection as c:
@@ -144,22 +160,24 @@ class SchemaTest(unittest.TestCase):
                 map(lambda m: m.uri, self.tracks),
                 map(lambda m: m.uri, schema.browse(c, Ref.TRACK))
             )
-
-            result = schema.browse(c, Ref.TRACK, artist=self.artists[0].uri)
-            result = list(result)
-            self.assertEqual(2, len(result))
-
-            result = schema.browse(c, Ref.TRACK, artist=self.artists[1].uri)
-            result = list(result)
-            self.assertEqual(1, len(result))
-
-            result = schema.browse(c, Ref.TRACK, composer=self.artists[0].uri)
-            result = list(result)
-            self.assertEqual(1, len(result))
-
-            result = schema.browse(c, Ref.TRACK, performer=self.artists[0].uri)
-            result = list(result)
-            self.assertEqual(1, len(result))
+            self.assertItemsEqual(
+                map(lambda m: m.uri, [self.tracks[1]]),
+                map(lambda m: m.uri, schema.browse(c, Ref.TRACK, artist=self.artists[0].uri))
+            )
+            self.assertItemsEqual(
+                map(lambda m: m.uri, [self.tracks[2]]),
+                map(lambda m: m.uri, schema.browse(c, Ref.TRACK, album=self.albums[0].uri))
+            )
+            self.assertItemsEqual(
+                map(lambda m: m.uri, [self.tracks[3]]),
+                map(lambda m: m.uri, schema.browse(c, Ref.TRACK, albumartist=self.artists[0].uri))
+            )
+            self.assertItemsEqual(
+                map(lambda m: m.uri, [self.tracks[4]]),
+                map(lambda m: m.uri, schema.browse(
+                    c, Ref.TRACK, composer=self.artists[0].uri, performer=self.artists[0].uri
+                ))
+            )
 
     def test_delete(self):
         c = self.connection

@@ -1,3 +1,15 @@
+0.8.0 2014-10-22
+----------------
+
+- Support file system browsing.
+
+- Deprecate `encodings` configuration setting.
+
+- Add database indexes for `date` and `track_no`.
+
+- Refactor browsing implementation and image directory.
+
+
 0.7.3 2014-10-15
 ----------------
 

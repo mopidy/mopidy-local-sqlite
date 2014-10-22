@@ -9,14 +9,13 @@ based on SQLite's FTS_ modules.  It also notices updates via ``mopidy
 local scan`` while Mopidy is running, so you can scan your media
 library periodically from a cron job, for example.
 
-This extension also features *experimental* support for using album
-art embedded in local media files.  If ``extract_images`` is set to
-``true``, images will be extracted from media files and stored
-seperately in Mopidy's ``local/data_dir``.  Corresponding image URIs
-will be provided for albums, so Web clients can access these images
-through Mopidy's integrated Web server.  Note, however, that `some
-clients`_ will still ignore album images provided by
-Mopidy-Local-SQLite.
+Using album art embedded in local media files is also supported.  If
+``extract_images`` is set to ``true``, images will be extracted from
+media files and stored seperately in Mopidy's ``local/data_dir``.
+Corresponding image URIs will be provided for albums, so Web clients
+can access these images through Mopidy's integrated Web server.  Note,
+however, that `some clients`_ will still ignore album images provided
+by Mopidy-Local-SQLite.
 
 
 Installation
@@ -50,19 +49,16 @@ but beware that these are still subject to change::
     [local-sqlite]
     enabled = true
 
-    # top-level directories for browsing, format is <name> <uri>
+    # top-level directories for browsing, as <name> <uri>
     directories =
-        Albums      local:directory?type=album
-        Artists     local:directory?type=artist&role=artist
-        Composers   local:directory?type=artist&role=composer
-        Performers  local:directory?type=artist&role=performer
-        Genres      local:directory?type=genre
-        Years       local:directory?type=date&format=%25Y
-        Tracks      local:directory?type=track
-
-    # encodings (in order of preference) to try when generating track
-    # names from file URIs
-    encodings = utf-8, latin-1
+        Albums              local:directory?type=album
+        Artists             local:directory?type=artist
+        Composers           local:directory?type=artist&role=composer
+        Folders             local:directory:
+        Genres              local:directory?type=genre
+        Performers          local:directory?type=artist&role=performer
+        Release Years       local:directory?type=date&format=%25Y
+        Tracks              local:directory?type=track
 
     # database connection timeout in seconds
     timeout = 10
@@ -75,18 +71,19 @@ but beware that these are still subject to change::
     # multi-artist tracks [https://github.com/sampsyo/beets/issues/907]
     use_artist_mbid_uri = false
 
-    # whether to extract images from local media files (experimental)
+    # whether to extract images from local media files
     extract_images = false
 
-    # directory where extracted images are stored; if a relative path is
-    # given, names a subdirectory of <local/data_dir>/sqlite
-    image_dir = images
+    # directory where local image files are stored; if not set, defaults
+    # to a private subdirectory of local/data_dir
+    image_dir =
 
-    # base URI for images; if blank, the local file URI will be used
+    # base URI for images; change this if you want to serve images using
+    # an alternative Web server, such as Apache or nginx
     image_base_uri = /sqlite/images/
 
-    # file names to check for in the current directory when no embedded
-    # album art can be found; items may contain UNIX shell patterns
+    # list of file names to check for when searching for external album
+    # art; may contain UNIX shell patterns, i.e. "*", "?", etc.
     album_art_files = *.jpg, *.jpeg, *.png
 
 

@@ -161,7 +161,7 @@ class SQLiteLibrary(local.Library):
         return albums + tracks
 
     def _browse_directory(self, uri, order=('type', 'name')):
-        query = dict(uritools.urisplit(str(uri)).getquerylist())
+        query = dict(uritools.urisplit(uri).getquerylist())
         type = query.pop('type', None)
         role = query.pop('role', None)
 
@@ -202,7 +202,7 @@ class SQLiteLibrary(local.Library):
         return refs
 
     def _browse_directory_path(self, uri):
-        root = uritools.urisplit(str(uri)).getpath().partition(':')[2]
+        root = uritools.urisplit(uri).getpath().partition(':')[2]
         refs, tracks = [], []
         for name in sorted(os.listdir(os.path.join(self._media_dir, root))):
             path = os.path.join(root, name)

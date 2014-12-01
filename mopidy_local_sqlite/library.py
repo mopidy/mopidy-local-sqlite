@@ -142,10 +142,10 @@ class SQLiteLibrary(local.Library):
     def _browse_album(self, uri, order=('disc_no', 'track_no', 'name')):
         return schema.browse(self._connect(), Ref.TRACK, order, album=uri)
 
-    def _browse_artist(self, uri):
+    def _browse_artist(self, uri, order=('type', 'name')):
         with self._connect() as c:
-            albums = schema.browse(c, Ref.ALBUM, albumartist=uri)
-            refs = schema.browse(c, artist=uri)
+            albums = schema.browse(c, Ref.ALBUM, order, albumartist=uri)
+            refs = schema.browse(c, order=order, artist=uri)
         uris, tracks = {ref.uri for ref in albums}, []
         for ref in refs:
             if ref.type == Ref.TRACK:
@@ -160,7 +160,7 @@ class SQLiteLibrary(local.Library):
         albums.sort(key=operator.attrgetter('name'))
         return albums + tracks
 
-    def _browse_directory(self, uri):
+    def _browse_directory(self, uri, order=('type', 'name')):
         query = dict(uritools.urisplit(str(uri)).getquerylist())
         type = query.pop('type', None)
         role = query.pop('role', None)
@@ -172,10 +172,15 @@ class SQLiteLibrary(local.Library):
         if type == 'genre':
             return map(_genreref, schema.genres(self._connect()))
 
-        roles = role or ('artist', 'albumartist')
+        # Fix #38: keep sort order of album tracks; this also applies
+        # to composers and performers
+        if type == Ref.TRACK and 'album' in query:
+            order = ('disc_no', 'track_no', 'name')
+
+        roles = role or ('artist', 'albumartist')  # FIXME: re-think 'roles'...
 
         refs = []
-        for ref in schema.browse(self._connect(), type, role=roles, **query):
+        for ref in schema.browse(self._connect(), type, order, role=roles, **query):  # noqa
             if ref.type == Ref.TRACK or (not query and not role):
                 # FIXME: artist refs not browsable via mpd
                 if ref.type == Ref.ARTIST:

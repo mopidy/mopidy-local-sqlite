@@ -3,6 +3,8 @@
 
 - Move image extraction to `Mopidy-Local-Images`.
 
+- Add `max-age` URI parameter.
+
 
 0.8.1 2014-12-01
 ----------------

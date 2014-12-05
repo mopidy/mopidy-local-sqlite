@@ -39,17 +39,18 @@ _BROWSE_QUERIES = {
 }
 
 _BROWSE_FILTERS = {
-    None: dict(
-        album='track.album = ?',
-        albumartist='album.artists = ?',
-        artist='track.artists = ?',
-        composer='track.composers = ?',
-        date="track.date LIKE ? || '%'",
-        genre='track.genre = ?',
-        performer='track.performers = ?'
-    ),
-    Ref.ARTIST: dict(
-        role={
+    None: {
+        'album': 'track.album = ?',
+        'albumartist': 'album.artists = ?',
+        'artist': 'track.artists = ?',
+        'composer': 'track.composers = ?',
+        'date': "track.date LIKE ? || '%'",
+        'genre': 'track.genre = ?',
+        'performer': 'track.performers = ?',
+        'max-age': "track.last_modified > strftime('%s', 'now') - ?",
+    },
+    Ref.ARTIST: {
+        'role': {
             'albumartist': """EXISTS (
                 SELECT * FROM album WHERE album.artists = artist.uri
             )""",
@@ -63,26 +64,43 @@ _BROWSE_FILTERS = {
                 SELECT * FROM track WHERE track.performers = artist.uri
             )"""
         },
-    ),
-    Ref.ALBUM: dict(
-        albumartist='artists = ?',
-        artist='? IN (SELECT artists FROM track WHERE album = album.uri)',
-        composer='? IN (SELECT composers FROM track WHERE album = album.uri)',
-        date="""EXISTS (
+    },
+    Ref.ALBUM: {
+        'albumartist': 'artists = ?',
+        'artist': """? IN (
+            SELECT artists FROM track WHERE album = album.uri
+        )""",
+        'composer': """? IN (
+            SELECT composers FROM track WHERE album = album.uri
+        )""",
+        'date': """EXISTS (
             SELECT * FROM track WHERE album = album.uri AND date LIKE ? || '%'
         )""",
-        genre='? IN (SELECT genre FROM track WHERE album = album.uri)',
-        performer='? IN (SELECT performers FROM track WHERE album = album.uri)'
-    ),
-    Ref.TRACK: dict(
-        album='album = ?',
-        albumartist='? IN (SELECT artists FROM album WHERE uri = track.album)',
-        artist='artists = ?',
-        composer='composers = ?',
-        date="date LIKE ? || '%'",
-        genre='genre = ?',
-        performer='performers = ?'
-    )
+        'genre': """? IN (
+            SELECT genre FROM track WHERE album = album.uri
+        )""",
+        'performer': """? IN (
+            SELECT performers FROM track WHERE album = album.uri
+        )""",
+        'max-age': """EXISTS (
+            SELECT *
+              FROM track
+             WHERE album = album.uri
+               AND last_modified > strftime('%s', 'now') - ?
+        )""",
+    },
+    Ref.TRACK: {
+        'album': 'album = ?',
+        'albumartist': """? IN (
+            SELECT artists FROM album WHERE uri = track.album
+        )""",
+        'artist': 'artists = ?',
+        'composer': 'composers = ?',
+        'date': "date LIKE ? || '%'",
+        'genre': 'genre = ?',
+        'performer': 'performers = ?',
+        'max-age': "last_modified > strftime('%s', 'now') - ?",
+    }
 }
 
 _SEARCH_SQL = """
@@ -98,9 +116,9 @@ _SEARCH_FILTERS = {
     'composer': 'composer_uri = ?',
     'date': "date LIKE ? || '%'",
     'genre': 'genre = ?',
-    'mtime': "datetime(last_motified, 'unixepoch') LIKE ? || '%'",
     'performer': 'performer_uri = ?',
     'uri': 'uri GLOB ?',
+    'max-age': "last_modified > strftime('%s', 'now') - ?",
 }
 
 _SEARCH_FIELDS = {

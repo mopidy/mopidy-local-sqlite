@@ -2,7 +2,7 @@
 
 BEGIN EXCLUSIVE TRANSACTION;
 
-PRAGMA user_version = 4;                -- schema version for upgrade
+PRAGMA user_version = 5;                -- schema version
 
 CREATE TABLE artist (
     uri             TEXT PRIMARY KEY,   -- artist URI
@@ -57,6 +57,7 @@ CREATE INDEX track_genre_index          ON track (genre);
 CREATE INDEX track_track_no_index       ON track (track_no);
 CREATE INDEX track_date_index           ON track (date);
 CREATE INDEX track_comment_index        on track (comment);
+CREATE INDEX track_last_modified_index  on track (last_modified);
 
 -- Convenience views
 

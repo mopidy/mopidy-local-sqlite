@@ -1,4 +1,4 @@
-0.9.0 UNRELEASED
+0.9.0 2014-12-05
 ----------------
 
 - Move image extraction to `Mopidy-Local-Images`.

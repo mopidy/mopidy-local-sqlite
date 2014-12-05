@@ -135,7 +135,7 @@ _SEARCH_FIELDS = {
     'comment'
 }
 
-schema_version = 4
+schema_version = 5
 
 logger = logging.getLogger(__name__)
 

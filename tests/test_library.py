@@ -18,7 +18,6 @@ class LocalLibraryProviderTest(unittest.TestCase):
             'timeout': 1.0,
             'use_album_mbid_uri': False,
             'use_artist_mbid_uri': False,
-            'extract_images': False
         }
     }
 

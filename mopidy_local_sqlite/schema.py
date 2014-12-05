@@ -173,14 +173,6 @@ def dates(c, format='%Y-%m-%d'):
     """, [format]))
 
 
-def images(c):
-    return itertools.chain.from_iterable(row[0].split() for row in c.execute("""
-    SELECT DISTINCT images
-      FROM album
-     WHERE images IS NOT NULL
-    """))
-
-
 def lookup(c, uri):
     row = c.execute('SELECT * FROM tracks WHERE uri = ?', [uri]).fetchone()
     if row:

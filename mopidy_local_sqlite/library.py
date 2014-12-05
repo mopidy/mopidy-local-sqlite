@@ -9,12 +9,11 @@ import sqlite3
 import uritools
 
 from mopidy import local
-from mopidy.local import translator  # FIXME: undocumented Mopidy API
+from mopidy.exceptions import ExtensionError
+from mopidy.local import translator
 from mopidy.models import Ref, SearchResult
 
 from . import Extension, schema
-
-DBNAME = 'library.db'
 
 logger = logging.getLogger(__name__)
 
@@ -27,24 +26,23 @@ class SQLiteLibrary(local.Library):
 
     def __init__(self, config):
         self._config = ext_config = config[Extension.ext_name]
-        self._dbpath = os.path.join(Extension.get_data_dir(config), DBNAME)
-        self._media_dir = config['local']['media_dir']
+        self._data_dir = Extension.get_or_create_data_dir(config)
+        try:
+            self._media_dir = config['local']['media_dir']
+        except KeyError:
+            raise ExtensionError('Mopidy-Local not enabled')
         self._directories = []
         for line in ext_config['directories']:
             name, uri = line.rsplit(None, 1)
             ref = Ref.directory(uri=uri, name=name)
             self._directories.append(ref)
-        if ext_config['extract_images']:
-            from .images import ImageDirectory
-            self._images = ImageDirectory(config)
-        else:
-            self._images = None
+        self._dbpath = os.path.join(self._data_dir, b'library.db')
         self._connection = None
 
     def load(self):
         with self._connect() as connection:
             version = schema.load(connection)
-            logger.info('Using SQLite database schema v%s', version)
+            logger.debug('Using SQLite database schema v%s', version)
             return schema.count_tracks(connection)
 
     def lookup(self, uri):
@@ -87,12 +85,6 @@ class SQLiteLibrary(local.Library):
     def add(self, track):
         try:
             track = self._validate_track(track)
-            if self._images and track.album:
-                uri = translator.local_track_uri_to_file_uri(
-                    track.uri, self._media_dir
-                )
-                album = track.album.copy(images=self._images.scan(uri))
-                track = track.copy(album=album)
             schema.insert_track(self._connect(), track)
         except Exception as e:
             logger.warn('Skipped %s: %s', track.uri, e)
@@ -108,26 +100,17 @@ class SQLiteLibrary(local.Library):
 
     def close(self):
         schema.cleanup(self._connection)
-        if self._images:
-            self._images.cleanup(schema.images(self._connection))
         self._connection.commit()
         self._connection.close()
         self._connection = None
 
     def clear(self):
-        with self._connect() as connection:
-            try:
-                schema.clear(connection)
-            except sqlite3.Error as e:
-                logger.error('Error clearing SQLite database: %s', e)
-                return False
-        if self._images:
-            try:
-                self._images.clear()
-            except Exception as e:
-                logger.error('Error clearing image directory: %s', e)
-                return False
-        return True
+        try:
+            schema.clear(self._connect())
+            return True
+        except sqlite3.Error as e:
+            logger.error('Error clearing SQLite database: %s', e)
+            return False
 
     def _connect(self):
         if not self._connection:

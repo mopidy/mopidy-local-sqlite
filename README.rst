@@ -9,14 +9,6 @@ based on SQLite's FTS_ modules.  It also notices updates via ``mopidy
 local scan`` while Mopidy is running, so you can scan your media
 library periodically from a cron job, for example.
 
-Using album art embedded in local media files is also supported.  If
-``extract_images`` is set to ``true``, images will be extracted from
-media files and stored seperately in Mopidy's ``local/data_dir``.
-Corresponding image URIs will be provided for albums, so Web clients
-can access these images through Mopidy's integrated Web server.  Note,
-however, that `some clients`_ will still ignore album images provided
-by Mopidy-Local-SQLite.
-
 
 Installation
 ------------------------------------------------------------------------
@@ -44,7 +36,7 @@ the database::
     mopidy local scan
 
 This extension also provides some configuration settings of its own,
-but beware that these are still subject to change::
+but be aware that these are still subject to change::
 
     [local-sqlite]
     enabled = true
@@ -71,21 +63,6 @@ but beware that these are still subject to change::
     # multi-artist tracks [https://github.com/sampsyo/beets/issues/907]
     use_artist_mbid_uri = false
 
-    # whether to extract images from local media files
-    extract_images = false
-
-    # directory where local image files are stored; if not set, defaults
-    # to a private subdirectory of local/data_dir
-    image_dir =
-
-    # base URI for images; change this if you want to serve images using
-    # an alternative Web server, such as Apache or nginx
-    image_base_uri = /sqlite/images/
-
-    # list of file names to check for when searching for external album
-    # art; may contain UNIX shell patterns, i.e. "*", "?", etc.
-    album_art_files = *.jpg, *.jpeg, *.png
-
 
 Project Resources
 ------------------------------------------------------------------------
@@ -98,9 +75,13 @@ Project Resources
     :target: https://pypi.python.org/pypi/Mopidy-Local-SQLite/
     :alt: Number of PyPI downloads
 
-.. image:: http://img.shields.io/travis/tkem/mopidy-local-sqlite.svg?style=flat
+.. image:: http://img.shields.io/travis/tkem/mopidy-local-sqlite/master.svg?style=flat
     :target: https://travis-ci.org/tkem/mopidy-local-sqlite/
     :alt: Travis CI build status
+
+.. image:: http://img.shields.io/coveralls/tkem/mopidy-local-sqlite/master.svg?style=flat
+   :target: https://coveralls.io/r/tkem/mopidy-local-sqlite/
+   :alt: Test coverage
 
 - `Issue Tracker`_
 - `Source Code`_
@@ -119,7 +100,7 @@ Known Bugs and Limitations
 ------------------------------------------------------------------------
 
 The database schema does not support multiple artists, composers or
-performers for a single track or album (yet).  Look out for "Ignoring
+performers for a single track or album.  Look out for "Ignoring
 multiple artists" warnings during a local scan to see if you are
 affected by this.
 
@@ -127,12 +108,11 @@ affected by this.
 .. _Mopidy: http://www.mopidy.com/
 .. _SQLite: http://www.sqlite.org/
 .. _FTS: http://www.sqlite.org/fts3.html
-.. _some clients: https://github.com/martijnboland/moped/issues/17
 
 .. _pip: https://pip.pypa.io/en/latest/
 
 .. _Issue Tracker: https://github.com/tkem/mopidy-local-sqlite/issues/
 .. _Source Code: https://github.com/tkem/mopidy-local-sqlite/
-.. _Change Log: https://raw.github.com/tkem/mopidy-local-sqlite/master/Changes
+.. _Change Log: https://github.com/tkem/mopidy-local-sqlite/blob/master/CHANGES.rst
 
 .. _Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0

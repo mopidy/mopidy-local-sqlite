@@ -1,3 +1,9 @@
+0.9.0 UNRELEASED
+----------------
+
+- Move image extraction to `Mopidy-Local-Images`.
+
+
 0.8.1 2014-12-01
 ----------------
 
@@ -9,7 +15,7 @@
 
 - Support file system browsing.
 
-- Deprecate `encodings` configuration setting.
+- Deprecate ``encodings`` configuration setting.
 
 - Add database indexes for `date` and `track_no`.
 
@@ -25,7 +31,7 @@
 0.7.2 2014-10-12
 ----------------
 
-- Do not raise exceptions from `http:app` factory.
+- Do not raise exceptions from ``http:app`` factory.
 
 - Fix file URI for scanning images.
 
@@ -47,10 +53,10 @@
 
 - Configurable root directories with refactored URI scheme.
 
-- Deprecate `foreign_keys`, `hash` and `default_image_extension`
+- Deprecate ``foreign_keys``, ``hash`` and ``default_image_extension``
   confvals.
 
-- Depend on Mopidy >= 0.19.4 for `mopidy.local.ROOT_DIRECTORY_URI`.
+- Depend on Mopidy >= 0.19.4 for ``mopidy.local.ROOT_DIRECTORY_URI``.
 
 
 0.6.4 2014-09-11
@@ -68,7 +74,7 @@
 0.6.2 2014-09-09
 ----------------
 
-- Catch all exceptions within `SQLiteLibrary.add()`.
+- Catch all exceptions within ``SQLiteLibrary.add()``.
 
 - Configurable encoding(s) for generated track names.
 
@@ -76,7 +82,7 @@
 0.6.1 2014-09-06
 ----------------
 
-- Handle empty queries in `schema.search()`.
+- Handle empty queries in ``schema.search()``.
 
 
 0.6.0 2014-09-02
@@ -92,7 +98,7 @@
 
 _ Support browsing by composer and performer.
 
-- Perform `ANALYZE` after local scan.
+- Perform ``ANALYZE`` after local scan.
 
 
 0.4.0 2014-08-24

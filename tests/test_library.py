@@ -5,7 +5,7 @@ import tempfile
 import unittest
 
 from mopidy.local import translator
-from mopidy.models import Track
+from mopidy.models import SearchResult, Track
 from mopidy_local_sqlite import library
 
 
@@ -54,3 +54,12 @@ class LocalLibraryProviderTest(unittest.TestCase):
         self.library.close()
         self.library.clear()
         self.assertEqual(self.library.load(), 0)
+
+    def test_search_uri(self):
+        empty = SearchResult(uri='local:search?')
+        self.assertEqual(empty, self.library.search(uris=None))
+        self.assertEqual(empty, self.library.search(uris=[]))
+        self.assertEqual(empty, self.library.search(uris=['local:']))
+        self.assertEqual(empty, self.library.search(uris=['local:directory']))
+        self.assertEqual(empty, self.library.search(uris=['local:directory:']))
+        self.assertEqual(empty, self.library.search(uris=['foobar:']))

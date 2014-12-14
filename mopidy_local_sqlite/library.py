@@ -15,6 +15,8 @@ from mopidy.models import Ref, SearchResult
 
 from . import Extension, schema
 
+URI_PREFIX = 'local:'
+
 logger = logging.getLogger(__name__)
 
 
@@ -233,7 +235,7 @@ class SQLiteLibrary(local.Library):
         )
 
     def _filters(self, uri):
-        if not uri or uri in (self.ROOT_DIRECTORY_URI, self.ROOT_PATH_URI):
+        if uri in (URI_PREFIX, self.ROOT_DIRECTORY_URI, self.ROOT_PATH_URI):
             return []
         elif uri.startswith(self.ROOT_PATH_URI):
             return [{'uri': uri.replace('directory', 'track', 1) + '/*'}]
@@ -244,7 +246,8 @@ class SQLiteLibrary(local.Library):
         elif uri.startswith('local:album'):
             return [{'album': uri}]
         else:
-            raise ValueError('Invalid search URI: %s', uri)
+            logger.warn('Invalid search URI: %s', uri)
+            return []
 
     def _model_uri(self, type, model):
         if model.musicbrainz_id and self._config['use_%s_mbid_uri' % type]:

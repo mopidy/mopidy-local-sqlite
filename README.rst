@@ -51,7 +51,6 @@ but be aware that these are still subject to change::
         Performers              local:directory?type=artist&role=performer
         Release Years           local:directory?type=date&format=%25Y
         Tracks                  local:directory?type=track
-        Today's Updates         local:directory?max-age=86400
         Last Week's Updates     local:directory?max-age=604800
         Last Month's Updates    local:directory?max-age=2592000
 

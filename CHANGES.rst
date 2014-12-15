@@ -3,6 +3,8 @@
 
 - Skip invalid search URIs.
 
+- Use file system encoding when browsing `Folders`.
+
 
 0.9.0 2014-12-05
 ----------------

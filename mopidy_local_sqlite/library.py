@@ -6,18 +6,28 @@ import operator
 import os
 import os.path
 import sqlite3
+import sys
 import uritools
 
 from mopidy import local
 from mopidy.exceptions import ExtensionError
 from mopidy.local import translator
 from mopidy.models import Ref, SearchResult
+from mopidy.utils.path import uri_to_path
 
 from . import Extension, schema
 
 URI_PREFIX = 'local:'
 
 logger = logging.getLogger(__name__)
+
+
+# missing from mopidy.local.translator
+def local_directory_uri_to_path(uri, media_dir):
+    if not uri.startswith('local:directory:'):
+        raise ValueError('Invalid URI.')
+    file_path = uri_to_path(uri).split(b':', 1)[1]
+    return os.path.join(media_dir, file_path)
 
 
 class SQLiteLibrary(local.Library):
@@ -55,7 +65,7 @@ class SQLiteLibrary(local.Library):
             if uri == self.ROOT_DIRECTORY_URI:
                 return self._directories
             elif uri.startswith(self.ROOT_PATH_URI):
-                return self._browse_directory_path(uri)
+                return self._browse_path(uri)
             elif uri.startswith('local:directory'):
                 return self._browse_directory(uri)
             elif uri.startswith('local:artist'):
@@ -186,16 +196,17 @@ class SQLiteLibrary(local.Library):
                 logger.warn('Unexpected SQLite browse result: %r', ref)
         return refs
 
-    def _browse_directory_path(self, uri):
-        root = uritools.urisplit(uri).getpath().partition(':')[2]
+    def _browse_path(self, uri, encoding=sys.getfilesystemencoding()):
+        root = local_directory_uri_to_path(uri, b'')
         refs, tracks = [], []
-        for name in sorted(os.listdir(os.path.join(self._media_dir, root))):
-            path = os.path.join(root, name)
-            if os.path.isdir(os.path.join(self._media_dir, path)):
-                uri = translator.path_to_local_directory_uri(path)
+        for file in sorted(os.listdir(os.path.join(self._media_dir, root))):
+            relpath = os.path.join(root, file)
+            name = file.decode(encoding, 'replace')
+            if os.path.isdir(os.path.join(self._media_dir, relpath)):
+                uri = translator.path_to_local_directory_uri(relpath)
                 refs.append(Ref.directory(uri=uri, name=name))
             else:
-                uri = translator.path_to_local_track_uri(path)
+                uri = translator.path_to_local_track_uri(relpath)
                 tracks.append(Ref.track(uri=uri, name=name))
         with self._connect() as c:
             refs += [track for track in tracks if schema.exists(c, track.uri)]
@@ -214,14 +225,14 @@ class SQLiteLibrary(local.Library):
         artists = map(self._validate_artist, album.artists)
         return album.copy(uri=uri, artists=artists)
 
-    def _validate_track(self, track):
+    def _validate_track(self, track, encoding=sys.getfilesystemencoding()):
         if not track.uri:
             raise ValueError('Empty track URI')
         if track.name:
             name = track.name
         else:
             path = translator.local_track_uri_to_path(track.uri, b'')
-            name = os.path.basename(path).decode('utf-8')
+            name = os.path.basename(path).decode(encoding, errors='replace')
         if track.album and track.album.name:
             album = self._validate_album(track.album)
         else:

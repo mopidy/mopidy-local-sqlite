@@ -1,3 +1,11 @@
+0.9.2 2015-01-14
+----------------
+
+- Return file URIs when browsing directories.
+
+- Add `search_limit` config value (default `-1`).
+
+
 0.9.1 2014-12-15
 ----------------
 

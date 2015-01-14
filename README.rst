@@ -38,32 +38,37 @@ the database::
 This extension also provides some configuration settings of its own,
 but be aware that these are still subject to change::
 
-    [local-sqlite]
-    enabled = true
+  [local-sqlite]
+  enabled = true
 
-    # top-level directories for browsing, as <name> <uri>
-    directories =
-        Albums                  local:directory?type=album
-        Artists                 local:directory?type=artist
-        Composers               local:directory?type=artist&role=composer
-        Folders                 local:directory:
-        Genres                  local:directory?type=genre
-        Performers              local:directory?type=artist&role=performer
-        Release Years           local:directory?type=date&format=%25Y
-        Tracks                  local:directory?type=track
-        Last Week's Updates     local:directory?max-age=604800
-        Last Month's Updates    local:directory?max-age=2592000
+  # top-level directories for browsing, as <name> <uri>
+  directories =
+      Albums                  local:directory?type=album
+      Artists                 local:directory?type=artist
+      Composers               local:directory?type=artist&role=composer
+      Folders                 local:directory:
+      Genres                  local:directory?type=genre
+      Performers              local:directory?type=artist&role=performer
+      Release Years           local:directory?type=date&format=%25Y
+      Tracks                  local:directory?type=track
+      Last Week's Updates     local:directory?max-age=604800
+      Last Month's Updates    local:directory?max-age=2592000
 
-    # database connection timeout in seconds
-    timeout = 10
+  # database connection timeout in seconds
+  timeout = 10
 
-    # whether to use an album's musicbrainz_id for generating its URI
-    use_album_mbid_uri = true
+  # whether to use an album's musicbrainz_id for generating its URI
+  use_album_mbid_uri = true
 
-    # whether to use an artist's musicbrainz_id for generating its URI;
-    # disabled by default, since some taggers do not handle this well for
-    # multi-artist tracks [https://github.com/sampsyo/beets/issues/907]
-    use_artist_mbid_uri = false
+  # whether to use an artist's musicbrainz_id for generating its URI;
+  # disabled by default, since some taggers do not handle this well for
+  # multi-artist tracks [https://github.com/sampsyo/beets/issues/907]
+  use_artist_mbid_uri = false
+
+  # override search limit provided by Mopidy core; set to -1 (no limit)
+  # to emulate current behavior of json library
+  # [https://github.com/mopidy/mopidy/issues/917]
+  search_limit = -1
 
 
 Project Resources
@@ -93,7 +98,7 @@ Project Resources
 License
 ------------------------------------------------------------------------
 
-Copyright (c) 2014 Thomas Kemmer.
+Copyright (c) 2014, 2015 Thomas Kemmer.
 
 Licensed under the `Apache License, Version 2.0`_.
 

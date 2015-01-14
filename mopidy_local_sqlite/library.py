@@ -13,7 +13,7 @@ from mopidy import local
 from mopidy.exceptions import ExtensionError
 from mopidy.local import translator
 from mopidy.models import Ref, SearchResult
-from mopidy.utils.path import uri_to_path
+from mopidy.utils.path import path_to_uri, uri_to_path
 
 from . import Extension, schema
 
@@ -41,6 +41,8 @@ class SQLiteLibrary(local.Library):
         self._data_dir = Extension.get_or_create_data_dir(config)
         try:
             self._media_dir = config['local']['media_dir']
+            excluded = config['local']['excluded_file_extensions']
+            self._excluded_ext = tuple(bytes(e.lower()) for e in excluded)
         except KeyError:
             raise ExtensionError('Mopidy-Local not enabled')
         self._directories = []
@@ -198,19 +200,19 @@ class SQLiteLibrary(local.Library):
 
     def _browse_path(self, uri, encoding=sys.getfilesystemencoding()):
         root = local_directory_uri_to_path(uri, b'')
-        refs, tracks = [], []
+        dirs, tracks = [], []
         for file in sorted(os.listdir(os.path.join(self._media_dir, root))):
-            relpath = os.path.join(root, file)
+            path = os.path.join(root, file)
             name = file.decode(encoding, 'replace')
-            if os.path.isdir(os.path.join(self._media_dir, relpath)):
-                uri = translator.path_to_local_directory_uri(relpath)
-                refs.append(Ref.directory(uri=uri, name=name))
-            else:
-                uri = translator.path_to_local_track_uri(relpath)
+            if os.path.isdir(os.path.join(self._media_dir, path)):
+                uri = translator.path_to_local_directory_uri(path)
+                dirs.append(Ref.directory(uri=uri, name=name))
+            elif not path.lower().endswith(self._excluded_ext):
+                uri = path_to_uri(os.path.join(self._media_dir, path))
                 tracks.append(Ref.track(uri=uri, name=name))
-        with self._connect() as c:
-            refs += [track for track in tracks if schema.exists(c, track.uri)]
-        return refs
+            else:
+                logger.debug('Skipped %s: File extension excluded.', path)
+        return dirs + tracks
 
     def _validate_artist(self, artist):
         if not artist.name:

@@ -25,7 +25,8 @@ class LocalLibraryProviderTest(unittest.TestCase):
         self.tempdir = tempfile.mkdtemp()
         self.library = library.SQLiteLibrary(dict(self.config, local={
             'media_dir': self.tempdir,
-            'data_dir': self.tempdir
+            'data_dir': self.tempdir,
+            'excluded_file_extensions': []
         }))
         self.library.load()
 

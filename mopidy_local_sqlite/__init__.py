@@ -26,6 +26,7 @@ class Extension(ext.Extension):
         schema['timeout'] = config.Integer(optional=True, minimum=1)
         schema['use_album_mbid_uri'] = config.Boolean()
         schema['use_artist_mbid_uri'] = config.Boolean()
+        schema['search_limit'] = config.Integer(optional=True)
         # no longer used
         schema['extract_images'] = config.Deprecated()
         schema['image_dir'] = config.Deprecated()

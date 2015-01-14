@@ -231,8 +231,10 @@ def search_tracks(c, query, limit, offset, exact, filters=[]):
             logger.debug('Skipped SQLite search filter %r', kwargs)
     if clauses:
         sql += ' AND (%s)' % ' OR '.join(clauses)
+    sql += ' LIMIT ? OFFSET ?'
+    params += [limit, offset]
     logger.debug('SQLite search query %r: %s', params, sql)
-    rows = c.execute(sql + ' LIMIT ? OFFSET ?', params + [limit, offset])
+    rows = c.execute(sql, params)
     return map(_track, rows)
 
 

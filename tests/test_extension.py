@@ -20,3 +20,4 @@ class ExtensionTest(unittest.TestCase):
         self.assertIn('timeout', schema)
         self.assertIn('use_album_mbid_uri', schema)
         self.assertIn('use_artist_mbid_uri', schema)
+        self.assertIn('search_limit', schema)

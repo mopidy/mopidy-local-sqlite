@@ -146,15 +146,17 @@ class SQLiteLibrary(local.Library):
         with self._connect() as c:
             albums = schema.browse(c, Ref.ALBUM, order, albumartist=uri)
             refs = schema.browse(c, order=order, artist=uri)
-        uris, tracks = {ref.uri for ref in albums}, []
+        album_uris, tracks = {ref.uri for ref in albums}, []
         for ref in refs:
-            if ref.type == Ref.TRACK:
-                tracks.append(ref)
-            elif ref.type == Ref.ALBUM and ref.uri not in uris:
-                uri = uritools.uricompose('local', None, 'directory', dict(
-                    type=Ref.TRACK, album=ref.uri, artist=uri
+            if ref.type == Ref.ALBUM and ref.uri not in album_uris:
+                albums.append(Ref.directory(
+                    uri=uritools.uricompose('local', None, 'directory', dict(
+                        type=Ref.TRACK, album=ref.uri, artist=uri
+                    )),
+                    name=ref.name
                 ))
-                albums.append(Ref.directory(uri=uri, name=ref.name))
+            elif ref.type == Ref.TRACK:
+                tracks.append(ref)
             else:
                 logger.debug('Skipped SQLite browse result %s', ref.uri)
         albums.sort(key=operator.attrgetter('name'))

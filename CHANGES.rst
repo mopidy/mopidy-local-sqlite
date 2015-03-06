@@ -1,3 +1,9 @@
+0.9.3 2015-03-06
+----------------
+
+- Fix URI handling when browsing albums via track artists.
+
+
 0.9.2 2015-01-14
 ----------------
 

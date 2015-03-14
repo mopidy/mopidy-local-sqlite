@@ -47,7 +47,7 @@ _BROWSE_FILTERS = {
         'date': "track.date LIKE ? || '%'",
         'genre': 'track.genre = ?',
         'performer': 'track.performers = ?',
-        'max-age': "track.last_modified > strftime('%s', 'now') - ?",
+        'max-age': "track.last_modified >= (strftime('%s', 'now') - ?) * 1000",
     },
     Ref.ARTIST: {
         'role': {
@@ -86,7 +86,7 @@ _BROWSE_FILTERS = {
             SELECT *
               FROM track
              WHERE album = album.uri
-               AND last_modified > strftime('%s', 'now') - ?
+               AND last_modified >= (strftime('%s', 'now') - ?) * 1000
         )""",
     },
     Ref.TRACK: {
@@ -99,7 +99,7 @@ _BROWSE_FILTERS = {
         'date': "date LIKE ? || '%'",
         'genre': 'genre = ?',
         'performer': 'performers = ?',
-        'max-age': "last_modified > strftime('%s', 'now') - ?",
+        'max-age': "last_modified >= (strftime('%s', 'now') - ?) * 1000",
     }
 }
 
@@ -118,7 +118,7 @@ _SEARCH_FILTERS = {
     'genre': 'genre = ?',
     'performer': 'performer_uri = ?',
     'uri': 'uri GLOB ?',
-    'max-age': "last_modified > strftime('%s', 'now') - ?",
+    'max-age': "last_modified >= (strftime('%s', 'now') - ?) * 1000",
 }
 
 _SEARCH_FIELDS = {

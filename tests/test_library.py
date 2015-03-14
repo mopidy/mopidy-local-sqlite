@@ -37,18 +37,20 @@ class LocalLibraryProviderTest(unittest.TestCase):
     def test_add_noname_ascii(self):
         name = b'Test.mp3'
         uri = translator.path_to_local_track_uri(name)
+        track = Track(name=name, uri=uri)
         self.library.begin()
-        self.library.add(Track(uri=uri))
+        self.library.add(track)
         self.library.close()
-        self.assertEqual(self.library.lookup(uri).name, name)
+        self.assertEqual([track], self.library.lookup(uri))
 
     def test_add_noname_utf8(self):
         name = u'Mi\xf0vikudags.mp3'
         uri = translator.path_to_local_track_uri(name.encode('utf-8'))
+        track = Track(name=name, uri=uri)
         self.library.begin()
-        self.library.add(Track(uri=uri))
+        self.library.add(track)
         self.library.close()
-        self.assertEqual(self.library.lookup(uri).name, name)
+        self.assertEqual([track], self.library.lookup(uri))
 
     def test_clear(self):
         self.library.begin()

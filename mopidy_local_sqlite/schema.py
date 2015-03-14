@@ -103,6 +103,18 @@ _BROWSE_FILTERS = {
     }
 }
 
+_LOOKUP_QUERIES = {
+    Ref.ALBUM: """
+    SELECT * FROM tracks WHERE album_uri = ?
+    """,
+    Ref.ARTIST: """
+    SELECT * FROM tracks WHERE ? IN (artist_uri, albumartist_uri)
+    """,
+    Ref.TRACK: """
+    SELECT * FROM tracks WHERE uri = ?
+    """
+}
+
 _SEARCH_SQL = """
 SELECT *
   FROM tracks
@@ -191,12 +203,8 @@ def dates(c, format='%Y-%m-%d'):
     """, [format]))
 
 
-def lookup(c, uri):
-    row = c.execute('SELECT * FROM tracks WHERE uri = ?', [uri]).fetchone()
-    if row:
-        return _track(row)
-    else:
-        return None
+def lookup(c, type, uri):
+    return itertools.imap(_track, c.execute(_LOOKUP_QUERIES[type], [uri]))
 
 
 def exists(c, uri):

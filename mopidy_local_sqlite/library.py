@@ -60,7 +60,15 @@ class SQLiteLibrary(local.Library):
             return schema.count_tracks(connection)
 
     def lookup(self, uri):
-        return schema.lookup(self._connect(), uri)
+        if uri.startswith('local:album'):
+            return list(schema.lookup(self._connect(), Ref.ALBUM, uri))
+        elif uri.startswith('local:artist'):
+            return list(schema.lookup(self._connect(), Ref.ARTIST, uri))
+        elif uri.startswith('local:track'):
+            return list(schema.lookup(self._connect(), Ref.TRACK, uri))
+        else:
+            logger.error('Invalid lookup URI %s', uri)
+            return []
 
     def browse(self, uri):
         try:

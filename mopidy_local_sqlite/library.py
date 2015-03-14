@@ -184,21 +184,15 @@ class SQLiteLibrary(local.Library):
         refs = []
         for ref in schema.browse(self._connect(), type, order, role=roles, **query):  # noqa
             if ref.type == Ref.TRACK or (not query and not role):
-                # FIXME: artist refs not browsable via mpd
-                if ref.type == Ref.ARTIST:
-                    refs.append(ref.copy(type=Ref.DIRECTORY))
-                else:
-                    refs.append(ref)
+                refs.append(ref)
             elif ref.type == Ref.ALBUM:
-                uri = uritools.uricompose('local', None, 'directory', dict(
-                    query, type=Ref.TRACK, album=ref.uri
-                ))
-                refs.append(Ref.directory(uri=uri, name=ref.name))
+                refs.append(Ref.directory(uri=uritools.uricompose(
+                    'local', None, 'directory', dict(query, type=Ref.TRACK, album=ref.uri)  # noqa
+                ), name=ref.name))
             elif ref.type == Ref.ARTIST:
-                uri = uritools.uricompose('local', None, 'directory', dict(
-                    query, **{role: ref.uri}
-                ))
-                refs.append(Ref.directory(uri=uri, name=ref.name))
+                refs.append(Ref.directory(uri=uritools.uricompose(
+                    'local', None, 'directory', dict(query, **{role: ref.uri})
+                ), name=ref.name))
             else:
                 logger.warn('Unexpected SQLite browse result: %r', ref)
         return refs

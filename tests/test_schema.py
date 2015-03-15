@@ -20,7 +20,8 @@ class SchemaTest(unittest.TestCase):
         Album(uri='local:album:2', name='album #2', artists=[artists[1]])
     ]
     tracks = [
-        Track(uri='local:track:0', name='track #0'),
+        Track(uri='local:track:0', name='track #0',
+              date='2015-03-15', genre='Rock'),
         Track(uri='local:track:1', name='track #1', artists=[artists[0]]),
         Track(uri='local:track:2', name='track #2', album=albums[0]),
         Track(uri='local:track:3', name='track #3', album=albums[1]),
@@ -43,6 +44,36 @@ class SchemaTest(unittest.TestCase):
         self.assertEqual(len(self.tracks), count)
         tracks = list(schema.tracks(self.connection))
         self.assertEqual(len(self.tracks), len(tracks))
+
+    def test_list_distinct(self):
+        self.assertItemsEqual(
+            [album.name for album in self.albums],
+            schema.list_distinct(self.connection, 'album')
+        )
+        self.assertItemsEqual(
+            [artist.name for artist in self.artists[0:2]],
+            schema.list_distinct(self.connection, 'albumartist')
+        )
+        self.assertItemsEqual(
+            [artist.name for artist in self.artists[0:1]],
+            schema.list_distinct(self.connection, 'artist')
+        )
+        self.assertItemsEqual(
+            [artist.name for artist in self.artists[0:1]],
+            schema.list_distinct(self.connection, 'composer')
+        )
+        self.assertItemsEqual(
+            [artist.name for artist in self.artists[0:1]],
+            schema.list_distinct(self.connection, 'performer')
+        )
+        self.assertItemsEqual(
+            [self.tracks[0].date],
+            schema.list_distinct(self.connection, 'date')
+        )
+        self.assertItemsEqual(
+            [self.tracks[0].genre],
+            schema.list_distinct(self.connection, 'genre')
+        )
 
     def test_lookup_track(self):
         with self.connection as c:

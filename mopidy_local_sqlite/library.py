@@ -104,6 +104,15 @@ class SQLiteLibrary(local.Library):
         uri = uritools.uricompose('local', path='search', query=q)
         return SearchResult(uri=uri, tracks=tracks)
 
+    def get_distinct(self, field, query=None):
+        q = []
+        for key, values in (query.items() if query else []):
+            if isinstance(values, basestring):
+                q.append((key, values))
+            else:
+                q.extend((key, value) for value in values)
+        return set(schema.list_distinct(self._connect(), field, q))
+
     def begin(self):
         return schema.tracks(self._connect())
 
@@ -180,7 +189,7 @@ class SQLiteLibrary(local.Library):
             format = query.get('format', '%Y-%m-%d')
             return map(_dateref, schema.dates(self._connect(), format=format))
         if type == 'genre':
-            return map(_genreref, schema.genres(self._connect()))
+            return map(_genreref, schema.list_distinct(self._connect(), 'genre'))  # noqa
 
         # Fix #38: keep sort order of album tracks; this also applies
         # to composers and performers

@@ -185,13 +185,28 @@ def tracks(c):
     return itertools.imap(_track, c.execute('SELECT * FROM tracks'))
 
 
-def genres(c):
-    return itertools.imap(operator.itemgetter(0), c.execute("""
-    SELECT DISTINCT genre
-      FROM track
-     WHERE genre IS NOT NULL
-     ORDER BY genre
-    """))
+def list_distinct(c, field, query=[]):
+    if field not in _SEARCH_FIELDS:
+        raise LookupError('Invalid search field: %s' % field)
+    sql = """
+    SELECT DISTINCT %s AS field
+      FROM search
+     WHERE field IS NOT NULL
+    """ % field
+    terms = []
+    params = []
+    for key, value in query:
+        if key == 'any':
+            terms.append('? IN (%s)' % ','.join(_SEARCH_FIELDS))
+        elif key in _SEARCH_FIELDS:
+            terms.append('%s = ?' % key)
+        else:
+            raise LookupError('Invalid search field: %s' % key)
+        params.append(value)
+    if terms:
+        sql += ' AND ' + ' AND '.join(terms)
+    logger.debug('SQLite list query %r: %s', params, sql)
+    return itertools.imap(operator.itemgetter(0), c.execute(sql, params))
 
 
 def dates(c, format='%Y-%m-%d'):

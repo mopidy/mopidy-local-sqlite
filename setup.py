@@ -24,7 +24,7 @@ setup(
     include_package_data=True,
     install_requires=[
         'setuptools',
-        'Mopidy >= 0.20.0',
+        'Mopidy >= 1.0',
         'uritools >= 0.11'
     ],
     test_suite='nose.collector',

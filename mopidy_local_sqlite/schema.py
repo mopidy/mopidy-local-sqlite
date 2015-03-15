@@ -6,7 +6,7 @@ import operator
 import os
 import sqlite3
 
-from mopidy.models import Artist, Album, Track, Ref
+from mopidy.models import Album, Artist, Ref, Track
 
 _BROWSE_QUERIES = {
     None: """

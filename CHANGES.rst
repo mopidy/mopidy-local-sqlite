@@ -1,3 +1,17 @@
+0.10.0 2015-03-25
+-----------------
+
+- Require Mopidy v1.0.
+
+- Implement ``Library.get_distinct``.
+
+- Lookup album and artist URIs.
+
+- ``Track.last_modified`` changed to milliseconds.
+
+- Return ``Ref.ARTIST`` for artists when browsing.
+
+
 0.9.3 2015-03-06
 ----------------
 

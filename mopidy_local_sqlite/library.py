@@ -7,13 +7,14 @@ import os
 import os.path
 import sqlite3
 import sys
-import uritools
 
 from mopidy import local
 from mopidy.exceptions import ExtensionError
 from mopidy.local import translator
 from mopidy.models import Ref, SearchResult
 from mopidy.utils.path import path_to_uri, uri_to_path
+
+import uritools
 
 from . import Extension, schema
 

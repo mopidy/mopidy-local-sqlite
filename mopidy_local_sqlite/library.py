@@ -91,10 +91,7 @@ class SQLiteLibrary(local.Library):
     def search(self, query=None, limit=100, offset=0, uris=None, exact=False):
         q = []
         for field, values in (query.items() if query else []):
-            if isinstance(values, basestring):
-                q.append((field, values))
-            else:
-                q.extend((field, value) for value in values)
+            q.extend((field, value) for value in values)
         # temporary workaround until Mopidy core sets limit
         if self._config['search_limit'] is not None:
             limit = self._config['search_limit']
@@ -107,10 +104,7 @@ class SQLiteLibrary(local.Library):
     def get_distinct(self, field, query=None):
         q = []
         for key, values in (query.items() if query else []):
-            if isinstance(values, basestring):
-                q.append((key, values))
-            else:
-                q.extend((key, value) for value in values)
+            q.extend((key, value) for value in values)
         return set(schema.list_distinct(self._connect(), field, q))
 
     def begin(self):

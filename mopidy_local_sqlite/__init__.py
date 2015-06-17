@@ -45,6 +45,8 @@ class Extension(ext.Extension):
         except KeyError:
             from mopidy.exceptions import ExtensionError
             raise ExtensionError('Mopidy-Local not enabled')
-        # FIXME: mopidy.utils.path is undocumented
-        from mopidy.utils.path import get_or_create_dir
-        return get_or_create_dir(os.path.join(data_dir, b'sqlite'))
+        path = os.path.join(data_dir, b'images')
+        if not os.path.isdir(path):
+            logger.info('Creating directory %s', path)
+            os.makedirs(path, 0o755)
+        return path

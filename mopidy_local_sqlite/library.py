@@ -12,23 +12,31 @@ from mopidy import local
 from mopidy.exceptions import ExtensionError
 from mopidy.local import translator
 from mopidy.models import Ref, SearchResult
-from mopidy.utils.path import path_to_uri, uri_to_path
 
 import uritools
 
 from . import Extension, schema
 
+
+# changed in Mopidy v1.1
+try:
+    from mopidy.local.translator import path_to_file_uri
+except ImportError:
+    from mopidy.utils.path import path_to_uri as path_to_file_uri
+try:
+    from mopidy.local.translator import local_uri_to_path
+except ImportError:
+    # missing from mopidy.local.translator
+    def local_directory_uri_to_path(uri, media_dir):
+        from mopidy.utils.path import uri_to_path
+        if not uri.startswith('local:directory:'):
+            raise ValueError('Invalid URI.')
+        file_path = uri_to_path(uri).split(b':', 1)[1]
+        return os.path.join(media_dir, file_path)
+
 URI_PREFIX = 'local:'
 
 logger = logging.getLogger(__name__)
-
-
-# missing from mopidy.local.translator
-def local_directory_uri_to_path(uri, media_dir):
-    if not uri.startswith('local:directory:'):
-        raise ValueError('Invalid URI.')
-    file_path = uri_to_path(uri).split(b':', 1)[1]
-    return os.path.join(media_dir, file_path)
 
 
 class SQLiteLibrary(local.Library):
@@ -210,7 +218,7 @@ class SQLiteLibrary(local.Library):
         return refs
 
     def _browse_path(self, uri, encoding=sys.getfilesystemencoding()):
-        root = local_directory_uri_to_path(uri, b'')
+        root = local_uri_to_path(uri, b'')
         dirs, tracks = [], []
         for file in sorted(os.listdir(os.path.join(self._media_dir, root))):
             path = os.path.join(root, file)
@@ -219,7 +227,7 @@ class SQLiteLibrary(local.Library):
                 uri = translator.path_to_local_directory_uri(path)
                 dirs.append(Ref.directory(uri=uri, name=name))
             elif not path.lower().endswith(self._excluded_ext):
-                uri = path_to_uri(os.path.join(self._media_dir, path))
+                uri = path_to_file_uri(os.path.join(self._media_dir, path))
                 tracks.append(Ref.track(uri=uri, name=name))
             else:
                 logger.debug('Skipped %s: File extension excluded.', path)

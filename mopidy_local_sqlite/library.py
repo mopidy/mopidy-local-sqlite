@@ -27,7 +27,7 @@ try:
     from mopidy.local.translator import local_uri_to_path
 except ImportError:
     # missing from mopidy.local.translator
-    def local_directory_uri_to_path(uri, media_dir):
+    def local_uri_to_path(uri, media_dir):
         from mopidy.utils.path import uri_to_path
         if not uri.startswith('local:directory:'):
             raise ValueError('Invalid URI.')

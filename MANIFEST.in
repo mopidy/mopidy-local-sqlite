@@ -1,8 +1,10 @@
+include .travis.yml
 include CHANGES.rst
 include LICENSE
 include MANIFEST.in
 include README.rst
 include mopidy_local_sqlite/ext.conf
+include tox.ini
 
 recursive-include mopidy_local_sqlite/sql *.sql
 recursive-include tests *.py

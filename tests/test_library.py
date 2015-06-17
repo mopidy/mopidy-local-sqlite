@@ -6,6 +6,7 @@ import unittest
 
 from mopidy.local import translator
 from mopidy.models import SearchResult, Track
+
 from mopidy_local_sqlite import library
 
 

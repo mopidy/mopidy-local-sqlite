@@ -3,7 +3,8 @@ from __future__ import unicode_literals
 import sqlite3
 import unittest
 
-from mopidy.models import Ref, Artist, Album, Track
+from mopidy.models import Album, Artist, Ref, Track
+
 from mopidy_local_sqlite import schema
 
 DBPATH = ':memory:'

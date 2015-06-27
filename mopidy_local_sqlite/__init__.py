@@ -5,7 +5,7 @@ import os
 
 from mopidy import config, ext
 
-__version__ = '0.10.1'
+__version__ = '0.10.2'
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class Extension(ext.Extension):
         except KeyError:
             from mopidy.exceptions import ExtensionError
             raise ExtensionError('Mopidy-Local not enabled')
-        path = os.path.join(data_dir, b'images')
+        path = os.path.join(data_dir, b'sqlite')
         if not os.path.isdir(path):
             logger.info('Creating directory %s', path)
             os.makedirs(path, 0o755)

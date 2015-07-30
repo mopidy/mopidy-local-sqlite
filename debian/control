@@ -1,0 +1,26 @@
+Source: mopidy-local-sqlite
+Section: sound
+Priority: optional
+Maintainer: Stein Magnus Jodal <stein.magnus@jodal.no>
+Build-Depends: debhelper (>= 9),
+               dh-python,
+               python-all (>= 2.7),
+               python-setuptools,
+Standards-Version: 3.9.6
+Homepage: https://github.com/tkem/mopidy-local-sqlite
+Vcs-Git: git://github.com/jodal/mopidy-local-sqlite.git
+Vcs-Browser: https://github.com/jodal/mopidy-local-sqlite
+X-Python-Version: >= 2.7
+
+Package: mopidy-local-sqlite
+Architecture: all
+Depends: ${misc:Depends},
+         ${python:Depends},
+Description: Mopidy extension for keeping your local library in SQLite
+ Mopidy is a music server which can play music from multiple sources, like your
+ local hard drive, radio streams, and from Spotify and SoundCloud.
+ .
+ This package provides a Mopidy local library extension that uses an SQLite
+ database for keeping track of your local media. This extension lets you browse
+ your music collection by album, artist, composer and performer, and provides
+ full-text search capabilities based on SQLite's FTS modules.

@@ -1,0 +1,5 @@
+mopidy-local-sqlite (0.10.2-1) unstable; urgency=low
+
+  * Initial release. (Closes: #794143)
+
+ -- Stein Magnus Jodal <stein.magnus@jodal.no>  Thu, 30 Jul 2015 22:48:51 +0200

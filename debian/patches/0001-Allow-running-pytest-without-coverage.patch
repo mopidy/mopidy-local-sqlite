@@ -1,0 +1,21 @@
+From: Stein Magnus Jodal <stein.magnus@jodal.no>
+Date: Tue, 18 Aug 2015 15:18:10 +0200
+Subject: Allow running pytest without coverage
+
+---
+ setup.cfg | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/setup.cfg b/setup.cfg
+index 141ee34..876852d 100644
+--- a/setup.cfg
++++ b/setup.cfg
+@@ -2,8 +2,5 @@
+ application-import-names = mopidy_local_sqlite,tests
+ exclude = .git,.tox,build
+ 
+-[pytest]
+-addopts = --cov=mopidy_local_sqlite --cov-report=term-missing
+-
+ [wheel]
+ universal = 1

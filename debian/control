@@ -6,7 +6,10 @@ Build-Depends: debhelper (>= 9),
                dh-python,
                mopidy (>= 1.0.8-2),
                python-all (>= 2.7),
+               python-mock,
+               python-pytest,
                python-setuptools,
+               python-uritools,
 Standards-Version: 3.9.6
 Homepage: https://github.com/mopidy/mopidy-local-sqlite
 Vcs-Git: git://github.com/mopidy/mopidy-local-sqlite.git

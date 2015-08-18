@@ -14,7 +14,7 @@ def get_version(filename):
 setup(
     name='Mopidy-Local-SQLite',
     version=get_version('mopidy_local_sqlite/__init__.py'),
-    url='https://github.com/tkem/mopidy-local-sqlite',
+    url='https://github.com/mopidy/mopidy-local-sqlite',
     license='Apache License, Version 2.0',
     author='Thomas Kemmer',
     author_email='tkemmer@computer.org',

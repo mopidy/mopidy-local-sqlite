@@ -1,7 +1,7 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: mopidy-local-sqlite
 Upstream-Contact: Thomas Kemmer <tkemmer@computer.org>
-Source: https://github.com/tkem/mopidy-local-sqlite
+Source: https://github.com/mopidy/mopidy-local-sqlite
 
 Files: *
 Copyright: 2014-2015 Thomas Kemmer and contributors

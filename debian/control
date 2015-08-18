@@ -8,9 +8,9 @@ Build-Depends: debhelper (>= 9),
                python-all (>= 2.7),
                python-setuptools,
 Standards-Version: 3.9.6
-Homepage: https://github.com/tkem/mopidy-local-sqlite
-Vcs-Git: git://github.com/jodal/mopidy-local-sqlite.git
-Vcs-Browser: https://github.com/jodal/mopidy-local-sqlite
+Homepage: https://github.com/mopidy/mopidy-local-sqlite
+Vcs-Git: git://github.com/mopidy/mopidy-local-sqlite.git
+Vcs-Browser: https://github.com/mopidy/mopidy-local-sqlite
 X-Python-Version: >= 2.7
 
 Package: mopidy-local-sqlite

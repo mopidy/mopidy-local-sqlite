@@ -40,6 +40,12 @@ class Extension(ext.Extension):
 
     @classmethod
     def get_or_create_data_dir(cls, config):
+        if hasattr(cls, 'get_data_dir'):
+            # Mopidy >= 1.1
+            data_dir = cls().get_data_dir(config)
+            migrate_old_data_dir(config, data_dir)
+            return data_dir
+        # Mopidy < 1.1
         try:
             data_dir = config['local']['data_dir']
         except KeyError:
@@ -50,3 +56,18 @@ class Extension(ext.Extension):
             logger.info('Creating directory %s', path)
             os.makedirs(path, 0o755)
         return path
+
+
+def migrate_old_data_dir(config, new_dir):
+    # Remove this method when we're confident most users have upgraded away
+    # from Mopidy 1.0.
+    old_dir = os.path.join(config['core']['data_dir'], b'local', b'sqlite')
+    if not os.path.isdir(old_dir):
+        return
+    logger.info('Migrating Mopidy-Local-SQLite to new data dir')
+    for filename in os.listdir(old_dir):
+        old_path = os.path.join(old_dir, filename)
+        new_path = os.path.join(new_dir, filename)
+        logger.info('Moving %r to %r', old_path, new_path)
+        os.rename(old_path, new_path)
+    os.rmdir(old_dir)

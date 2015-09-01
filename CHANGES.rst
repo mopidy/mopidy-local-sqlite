@@ -1,3 +1,12 @@
+0.11 (UNRELEASED)
+-----------------
+
+- If used with Mopidy 1.1 or newer, the data dir provided by Mopidy to each
+  extension is used to store the SQLite database containing the music metadata.
+  If we can find the old data dir, all files are automatically moved to the new
+  data dir.
+
+
 0.10.3 2015-08-18
 -----------------
 

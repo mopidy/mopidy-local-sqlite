@@ -6,6 +6,8 @@
   If we can find the old data dir, all files are automatically moved to the new
   data dir.
 
+- Deprecate `search_limit` config value.
+
 
 0.10.3 2015-08-18
 -----------------

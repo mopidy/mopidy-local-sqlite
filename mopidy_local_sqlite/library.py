@@ -101,9 +101,6 @@ class SQLiteLibrary(local.Library):
         q = []
         for field, values in (query.items() if query else []):
             q.extend((field, value) for value in values)
-        # temporary workaround until Mopidy core sets limit
-        if self._config['search_limit'] is not None:
-            limit = self._config['search_limit']
         filters = [f for uri in uris or [] for f in self._filters(uri) if f]
         with self._connect() as c:
             tracks = schema.search_tracks(c, q, limit, offset, exact, filters)

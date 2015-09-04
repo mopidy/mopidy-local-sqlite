@@ -170,7 +170,8 @@ class SQLiteLibrary(local.Library):
         # to composers and performers
         if type == Ref.TRACK and 'album' in query:
             order = ('disc_no', 'track_no', 'name')
-
+        if type == Ref.ARTIST and self._config['use_artist_sortname']:
+            order = ('coalesce(sortname, name)',)
         roles = role or ('artist', 'albumartist')  # FIXME: re-think 'roles'...
 
         refs = []

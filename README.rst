@@ -64,6 +64,10 @@ but be aware that these are still subject to change::
   # multi-artist tracks [https://github.com/sampsyo/beets/issues/907]
   use_artist_mbid_uri = false
 
+  # whether to use the sortname field for sorting artist browse results;
+  # set to false to sort according to displayed name only
+  use_artist_sortname = true
+
 
 Project Resources
 ------------------------------------------------------------------------

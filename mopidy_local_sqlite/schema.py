@@ -146,7 +146,7 @@ _SEARCH_FIELDS = {
     'comment'
 }
 
-schema_version = 5
+schema_version = 6
 
 logger = logging.getLogger(__name__)
 
@@ -169,8 +169,7 @@ def load(c):
     user_version = c.execute('PRAGMA user_version').fetchone()[0]
     if not user_version:
         logger.info('Creating SQLite database schema v%s', schema_version)
-        script = os.path.join(sql_dir, 'create-v%s.sql' % schema_version)
-        c.executescript(open(script).read())
+        c.executescript(open(os.path.join(sql_dir, 'schema.sql')).read())
         user_version = c.execute('PRAGMA user_version').fetchone()[0]
     while user_version != schema_version:
         logger.info('Upgrading SQLite database schema v%s', user_version)
@@ -269,6 +268,7 @@ def insert_artists(c, artists):
     _insert(c, 'artist', {
         'uri': artist.uri,
         'name': artist.name,
+        'sortname': artist.sortname,
         'musicbrainz_id': artist.musicbrainz_id
     })
     return artist.uri
@@ -422,6 +422,7 @@ def _track(row):
             albumartists = [Artist(
                 uri=row.albumartist_uri,
                 name=row.albumartist_name,
+                sortname=row.albumartist_sortname,
                 musicbrainz_id=row.albumartist_musicbrainz_id
             )]
         else:
@@ -440,18 +441,21 @@ def _track(row):
         kwargs['artists'] = [Artist(
             uri=row.artist_uri,
             name=row.artist_name,
+            sortname=row.artist_sortname,
             musicbrainz_id=row.artist_musicbrainz_id
         )]
     if row.composer_uri is not None:
         kwargs['composers'] = [Artist(
             uri=row.composer_uri,
             name=row.composer_name,
+            sortname=row.composer_sortname,
             musicbrainz_id=row.composer_musicbrainz_id
         )]
     if row.performer_uri is not None:
         kwargs['performers'] = [Artist(
             uri=row.performer_uri,
             name=row.performer_name,
+            sortname=row.performer_sortname,
             musicbrainz_id=row.performer_musicbrainz_id
         )]
     return Track(**kwargs)

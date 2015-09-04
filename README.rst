@@ -46,7 +46,6 @@ but be aware that these are still subject to change::
       Albums                  local:directory?type=album
       Artists                 local:directory?type=artist
       Composers               local:directory?type=artist&role=composer
-      Folders                 local:directory:
       Genres                  local:directory?type=genre
       Performers              local:directory?type=artist&role=performer
       Release Years           local:directory?type=date&format=%25Y

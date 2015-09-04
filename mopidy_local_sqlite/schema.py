@@ -129,7 +129,6 @@ _SEARCH_FILTERS = {
     'date': "date LIKE ? || '%'",
     'genre': 'genre = ?',
     'performer': 'performer_uri = ?',
-    'uri': 'uri GLOB ?',
     'max-age': "last_modified >= (strftime('%s', 'now') - ?) * 1000",
 }
 

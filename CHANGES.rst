@@ -6,6 +6,9 @@
   If we can find the old data dir, all files are automatically moved to the new
   data dir.
 
+- Remove file system ("Folders") browsing, since this is already
+  handled by the `file` backend in Mopidy v1.1.
+
 
 0.10.3 2015-08-18
 -----------------

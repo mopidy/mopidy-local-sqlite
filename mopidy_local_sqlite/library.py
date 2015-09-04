@@ -17,31 +17,10 @@ import uritools
 
 from . import Extension, schema
 
-
-# changed in Mopidy v1.1
-try:
-    from mopidy.local.translator import path_to_file_uri
-except ImportError:
-    from mopidy.utils.path import path_to_uri as path_to_file_uri
-try:
-    from mopidy.local.translator import local_uri_to_path
-except ImportError:
-    # missing from mopidy.local.translator
-    def local_uri_to_path(uri, media_dir):
-        from mopidy.utils.path import uri_to_path
-        if not uri.startswith('local:directory:'):
-            raise ValueError('Invalid URI.')
-        file_path = uri_to_path(uri).split(b':', 1)[1]
-        return os.path.join(media_dir, file_path)
-
-URI_PREFIX = 'local:'
-
 logger = logging.getLogger(__name__)
 
 
 class SQLiteLibrary(local.Library):
-
-    ROOT_PATH_URI = 'local:directory:'
 
     name = 'sqlite'
 
@@ -50,8 +29,6 @@ class SQLiteLibrary(local.Library):
         self._data_dir = Extension.get_or_create_data_dir(config)
         try:
             self._media_dir = config['local']['media_dir']
-            excluded = config['local']['excluded_file_extensions']
-            self._excluded_ext = tuple(bytes(e.lower()) for e in excluded)
         except KeyError:
             raise ExtensionError('Mopidy-Local not enabled')
         self._directories = []
@@ -83,8 +60,6 @@ class SQLiteLibrary(local.Library):
         try:
             if uri == self.ROOT_DIRECTORY_URI:
                 return self._directories
-            elif uri.startswith(self.ROOT_PATH_URI):
-                return self._browse_path(uri)
             elif uri.startswith('local:directory'):
                 return self._browse_directory(uri)
             elif uri.startswith('local:artist'):
@@ -217,22 +192,6 @@ class SQLiteLibrary(local.Library):
                 logger.warn('Unexpected SQLite browse result: %r', ref)
         return refs
 
-    def _browse_path(self, uri, encoding=sys.getfilesystemencoding()):
-        root = local_uri_to_path(uri, b'')
-        dirs, tracks = [], []
-        for file in sorted(os.listdir(os.path.join(self._media_dir, root))):
-            path = os.path.join(root, file)
-            name = file.decode(encoding, 'replace')
-            if os.path.isdir(os.path.join(self._media_dir, path)):
-                uri = translator.path_to_local_directory_uri(path)
-                dirs.append(Ref.directory(uri=uri, name=name))
-            elif not path.lower().endswith(self._excluded_ext):
-                uri = path_to_file_uri(os.path.join(self._media_dir, path))
-                tracks.append(Ref.track(uri=uri, name=name))
-            else:
-                logger.debug('Skipped %s: File extension excluded.', path)
-        return dirs + tracks
-
     def _validate_artist(self, artist):
         if not artist.name:
             raise ValueError('Empty artist name')
@@ -267,18 +226,13 @@ class SQLiteLibrary(local.Library):
         )
 
     def _filters(self, uri):
-        if uri in (URI_PREFIX, self.ROOT_DIRECTORY_URI, self.ROOT_PATH_URI):
-            return []
-        elif uri.startswith(self.ROOT_PATH_URI):
-            return [{'uri': uri.replace('directory', 'track', 1) + '/*'}]
-        elif uri.startswith('local:directory'):
+        if uri.startswith('local:directory'):
             return [dict(uritools.urisplit(uri).getquerylist())]
         elif uri.startswith('local:artist'):
             return [{'artist': uri}, {'albumartist': uri}]
         elif uri.startswith('local:album'):
             return [{'album': uri}]
         else:
-            logger.warn('Invalid search URI: %s', uri)
             return []
 
     def _model_uri(self, type, model):

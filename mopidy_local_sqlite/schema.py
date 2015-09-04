@@ -167,15 +167,18 @@ class Connection(sqlite3.Connection):
 def load(c):
     sql_dir = os.path.join(os.path.dirname(__file__), b'sql')
     user_version = c.execute('PRAGMA user_version').fetchone()[0]
-    if not user_version:
-        logger.info('Creating SQLite database schema v%s', schema_version)
-        c.executescript(open(os.path.join(sql_dir, 'schema.sql')).read())
-        user_version = c.execute('PRAGMA user_version').fetchone()[0]
     while user_version != schema_version:
-        logger.info('Upgrading SQLite database schema v%s', user_version)
-        script = os.path.join(sql_dir, 'upgrade-v%s.sql' % user_version)
-        c.executescript(open(script).read())
-        user_version = c.execute('PRAGMA user_version').fetchone()[0]
+        if user_version:
+            logger.info('Upgrading SQLite database schema v%s', user_version)
+            filename = 'upgrade-v%s.sql' % user_version
+        else:
+            logger.info('Creating SQLite database schema v%s', schema_version)
+            filename = 'schema.sql'
+        with open(os.path.join(sql_dir, filename)) as fh:
+            c.executescript(fh.read())
+        new_version = c.execute('PRAGMA user_version').fetchone()[0]
+        assert new_version != user_version
+        user_version = new_version
     return user_version
 
 

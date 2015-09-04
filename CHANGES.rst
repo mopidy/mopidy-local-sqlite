@@ -1,5 +1,7 @@
-0.11 (UNRELEASED)
------------------
+1.0.0 (UNRELEASED)
+------------------
+
+- Require Mopidy >= 1.1.
 
 - If used with Mopidy 1.1 or newer, the data dir provided by Mopidy to each
   extension is used to store the SQLite database containing the music metadata.

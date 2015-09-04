@@ -9,6 +9,8 @@
 - Remove file system ("Folders") browsing, since this is already
   handled by the `file` backend in Mopidy v1.1.
 
+- Deprecate `search_limit` config value.
+
 
 0.10.3 2015-08-18
 -----------------

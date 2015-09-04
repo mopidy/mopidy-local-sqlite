@@ -64,11 +64,6 @@ but be aware that these are still subject to change::
   # multi-artist tracks [https://github.com/sampsyo/beets/issues/907]
   use_artist_mbid_uri = false
 
-  # override search limit provided by Mopidy core; set to -1 (no limit)
-  # to emulate current behavior of json library
-  # [https://github.com/mopidy/mopidy/issues/917]
-  search_limit = -1
-
 
 Project Resources
 ------------------------------------------------------------------------

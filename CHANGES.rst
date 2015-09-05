@@ -8,9 +8,10 @@
   If we can find the old data dir, all files are automatically moved to the new
   data dir.
 
-- By default, browsing artists will use the "sortname" field for
-  ordering results, if available.  Set ``use_artist_sortname = false``
-  to sort according to sort according to the displayed name only.
+- Add support for ordering artist browse results based on their
+  ``sortname`` fields.  Set ``use_artist_sortname = true`` to enable
+  this, but be aware this may give confusing results if not all
+  artists in the library have proper sortnames.
 
 - Remove file system ("Folders") browsing, since this is already
   handled by the ``file`` backend in Mopidy v1.1.

@@ -1,3 +1,9 @@
+mopidy-local-sqlite (1.0.0-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Stein Magnus Jodal <stein.magnus@jodal.no>  Sat, 05 Sep 2015 21:56:21 +0200
+
 mopidy-local-sqlite (0.10.3-1) unstable; urgency=medium
 
   * New upstream release.

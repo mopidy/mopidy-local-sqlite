@@ -228,7 +228,7 @@ def exists(c, uri):
     return rows.fetchone()[0]
 
 
-def browse(c, type=None, order=('type', 'name'), **kwargs):
+def browse(c, type=None, order=('type', 'name COLLATE NOCASE'), **kwargs):
     filters, params = _filters(_BROWSE_FILTERS[type], **kwargs)
     sql = _BROWSE_QUERIES[type] % (
         ' AND '.join(filters) or '1',

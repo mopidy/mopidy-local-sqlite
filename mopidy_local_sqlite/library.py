@@ -134,7 +134,7 @@ class SQLiteLibrary(local.Library):
     def _browse_album(self, uri, order=('disc_no', 'track_no', 'name')):
         return schema.browse(self._connect(), Ref.TRACK, order, album=uri)
 
-    def _browse_artist(self, uri, order=('type', 'name')):
+    def _browse_artist(self, uri, order=('type', 'name COLLATE NOCASE')):
         with self._connect() as c:
             albums = schema.browse(c, Ref.ALBUM, order, albumartist=uri)
             refs = schema.browse(c, order=order, artist=uri)
@@ -154,7 +154,7 @@ class SQLiteLibrary(local.Library):
         albums.sort(key=operator.attrgetter('name'))
         return albums + tracks
 
-    def _browse_directory(self, uri, order=('type', 'name')):
+    def _browse_directory(self, uri, order=('type', 'name COLLATE NOCASE')):
         query = dict(uritools.urisplit(uri).getquerylist())
         type = query.pop('type', None)
         role = query.pop('role', None)
@@ -171,7 +171,7 @@ class SQLiteLibrary(local.Library):
         if type == Ref.TRACK and 'album' in query:
             order = ('disc_no', 'track_no', 'name')
         if type == Ref.ARTIST and self._config['use_artist_sortname']:
-            order = ('coalesce(sortname, name)',)
+            order = ('coalesce(sortname, name) COLLATE NOCASE',)
         roles = role or ('artist', 'albumartist')  # FIXME: re-think 'roles'...
 
         refs = []

@@ -12,6 +12,10 @@
   ordering results, if available.  Set ``use_artist_sortname = false``
   to sort according to sort according to the displayed name only.
 
+- Return browse results in case-insensitive sort order.  Note that
+  this will only work for ASCII characters due to SQLite's ``NOCASE``
+  limitations.
+
 - Remove file system ("Folders") browsing, since this is already
   handled by the ``file`` backend in Mopidy v1.1.
 

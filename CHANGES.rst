@@ -1,5 +1,5 @@
-1.0.0 (UNRELEASED)
-------------------
+v1.0.0 (UNRELEASED)
+-------------------
 
 - Require Mopidy >= 1.1.
 
@@ -23,28 +23,28 @@
 - Deprecate ``search_limit`` config value.
 
 
-0.10.3 2015-08-18
------------------
+v0.10.3 (2015-08-18)
+--------------------
 
 - Update links to GitHub repository.
 
 
-0.10.2 2015-06-27
------------------
+v0.10.2 (2015-06-27)
+--------------------
 
 - Fix data directory path.
 
 
-0.10.1 2015-06-17
------------------
+v0.10.1 (2015-06-17)
+--------------------
 
 - Update ``local.translator`` imports for Mopidy v1.1.
 
 - Update build/test environment.
 
 
-0.10.0 2015-03-25
------------------
+v0.10.0 (2015-03-25)
+--------------------
 
 - Require Mopidy v1.0.
 
@@ -57,44 +57,44 @@
 - Return ``Ref.ARTIST`` for artists when browsing.
 
 
-0.9.3 2015-03-06
-----------------
+v0.9.3 (2015-03-06)
+-------------------
 
 - Fix URI handling when browsing albums via track artists.
 
 
-0.9.2 2015-01-14
-----------------
+v0.9.2 (2015-01-14)
+-------------------
 
 - Return file URIs when browsing directories.
 
 - Add `search_limit` config value (default `-1`).
 
 
-0.9.1 2014-12-15
-----------------
+v0.9.1 (2014-12-15)
+-------------------
 
 - Skip invalid search URIs.
 
 - Use file system encoding when browsing `Folders`.
 
 
-0.9.0 2014-12-05
-----------------
+v0.9.0 (2014-12-05)
+-------------------
 
 - Move image extraction to `Mopidy-Local-Images`.
 
 - Add `max-age` URI parameter.
 
 
-0.8.1 2014-12-01
-----------------
+v0.8.1 (2014-12-01)
+-------------------
 
 - Fix track sort order when browsing non-album URIs.
 
 
-0.8.0 2014-10-22
-----------------
+v0.8.0 (2014-10-22)
+-------------------
 
 - Support file system browsing.
 
@@ -105,28 +105,28 @@
 - Refactor browsing implementation and image directory.
 
 
-0.7.3 2014-10-15
-----------------
+v0.7.3 (2014-10-15)
+-------------------
 
 - Improve browse performance.
 
 
-0.7.2 2014-10-12
-----------------
+v0.7.2 (2014-10-12)
+-------------------
 
 - Do not raise exceptions from ``http:app`` factory.
 
 - Fix file URI for scanning images.
 
 
-0.7.1 2014-10-09
-----------------
+v0.7.1 (2014-10-09)
+-------------------
 
 - Fix handling of `uris` search parameter.
 
 
-0.7.0 2014-10-08
-----------------
+v0.7.0 (2014-10-08)
+-------------------
 
 - Support for external album art.
 
@@ -142,40 +142,40 @@
 - Depend on Mopidy >= 0.19.4 for ``mopidy.local.ROOT_DIRECTORY_URI``.
 
 
-0.6.4 2014-09-11
-----------------
+v0.6.4 (2014-09-11)
+-------------------
 
 - Fix packaging issue.
 
 
-0.6.3 2014-09-11
-----------------
+v0.6.3 (2014-09-11)
+-------------------
 
 - Add index page for HTTP handler.
 
 
-0.6.2 2014-09-09
-----------------
+v0.6.2 (2014-09-09)
+-------------------
 
 - Catch all exceptions within ``SQLiteLibrary.add()``.
 
 - Configurable encoding(s) for generated track names.
 
 
-0.6.1 2014-09-06
-----------------
+v0.6.1 (2014-09-06)
+-------------------
 
 - Handle empty queries in ``schema.search()``.
 
 
-0.6.0 2014-09-02
-----------------
+v0.6.0 (2014-09-02)
+-------------------
 
 - Add HTTP handler for accessing local images.
 
 
-0.5.0 2014-08-26
-----------------
+v0.5.0 (2014-08-26)
+-------------------
 
 - Create `albums`, `artists`, etc. views.
 
@@ -184,32 +184,32 @@ _ Support browsing by composer and performer.
 - Perform ``ANALYZE`` after local scan.
 
 
-0.4.0 2014-08-24
-----------------
+v0.4.0 (2014-08-24)
+-------------------
 
 - Add `uris` parameter to schema.search_tracks().
 
 
-0.3.2 2014-08-22
-----------------
+v0.3.2 (2014-08-22)
+-------------------
 
 - Fixed exception handling when extracting images.
 
 
-0.3.1 2014-08-22
-----------------
+v0.3.1 (2014-08-22)
+-------------------
 
 - Delete unreferenced image files after local scan.
 
 
-0.3.0 2014-08-21
-----------------
+v0.3.0 (2014-08-21)
+-------------------
 
 - Extract images from local media files (experimental).
 
 
-0.2.0 2014-08-20
-----------------
+v0.2.0 (2014-08-20)
+-------------------
 
 - Support for indexed and full-text search.
 
@@ -220,15 +220,15 @@ _ Support browsing by composer and performer.
 - New configuration options for album/artist URI generation.
 
 
-0.1.1 2014-08-14
-----------------
+v0.1.1 (2014-08-14)
+-------------------
 
 - Browsing artists no longer returns composers and performers.
 
 - Clean up artists/albums after import.
 
 
-0.1.0 2014-08-13
-----------------
+v0.1.0 (2014-08-13)
+-------------------
 
 - Initial release.

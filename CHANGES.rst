@@ -3,8 +3,8 @@
 
 - Require Mopidy >= 1.1.
 
-- If used with Mopidy 1.1 or newer, the data dir provided by Mopidy to each
-  extension is used to store the SQLite database containing the music metadata.
+- The data directory provided by Mopidy v1.1 to each extension is now
+  used to store the SQLite database containing the music metadata.
   If we can find the old data dir, all files are automatically moved to the new
   data dir.
 

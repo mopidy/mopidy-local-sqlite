@@ -129,7 +129,6 @@ _SEARCH_FILTERS = {
     'date': "date LIKE ? || '%'",
     'genre': 'genre = ?',
     'performer': 'performer_uri = ?',
-    'uri': 'uri GLOB ?',
     'max-age': "last_modified >= (strftime('%s', 'now') - ?) * 1000",
 }
 
@@ -147,7 +146,7 @@ _SEARCH_FIELDS = {
     'comment'
 }
 
-schema_version = 5
+schema_version = 6
 
 logger = logging.getLogger(__name__)
 
@@ -168,16 +167,18 @@ class Connection(sqlite3.Connection):
 def load(c):
     sql_dir = os.path.join(os.path.dirname(__file__), b'sql')
     user_version = c.execute('PRAGMA user_version').fetchone()[0]
-    if not user_version:
-        logger.info('Creating SQLite database schema v%s', schema_version)
-        script = os.path.join(sql_dir, 'create-v%s.sql' % schema_version)
-        c.executescript(open(script).read())
-        user_version = c.execute('PRAGMA user_version').fetchone()[0]
     while user_version != schema_version:
-        logger.info('Upgrading SQLite database schema v%s', user_version)
-        script = os.path.join(sql_dir, 'upgrade-v%s.sql' % user_version)
-        c.executescript(open(script).read())
-        user_version = c.execute('PRAGMA user_version').fetchone()[0]
+        if user_version:
+            logger.info('Upgrading SQLite database schema v%s', user_version)
+            filename = 'upgrade-v%s.sql' % user_version
+        else:
+            logger.info('Creating SQLite database schema v%s', schema_version)
+            filename = 'schema.sql'
+        with open(os.path.join(sql_dir, filename)) as fh:
+            c.executescript(fh.read())
+        new_version = c.execute('PRAGMA user_version').fetchone()[0]
+        assert new_version != user_version
+        user_version = new_version
     return user_version
 
 
@@ -227,7 +228,7 @@ def exists(c, uri):
     return rows.fetchone()[0]
 
 
-def browse(c, type=None, order=('type', 'name'), **kwargs):
+def browse(c, type=None, order=('type', 'name COLLATE NOCASE'), **kwargs):
     filters, params = _filters(_BROWSE_FILTERS[type], **kwargs)
     sql = _BROWSE_QUERIES[type] % (
         ' AND '.join(filters) or '1',
@@ -270,6 +271,7 @@ def insert_artists(c, artists):
     _insert(c, 'artist', {
         'uri': artist.uri,
         'name': artist.name,
+        'sortname': artist.sortname,
         'musicbrainz_id': artist.musicbrainz_id
     })
     return artist.uri
@@ -423,6 +425,7 @@ def _track(row):
             albumartists = [Artist(
                 uri=row.albumartist_uri,
                 name=row.albumartist_name,
+                sortname=row.albumartist_sortname,
                 musicbrainz_id=row.albumartist_musicbrainz_id
             )]
         else:
@@ -441,18 +444,21 @@ def _track(row):
         kwargs['artists'] = [Artist(
             uri=row.artist_uri,
             name=row.artist_name,
+            sortname=row.artist_sortname,
             musicbrainz_id=row.artist_musicbrainz_id
         )]
     if row.composer_uri is not None:
         kwargs['composers'] = [Artist(
             uri=row.composer_uri,
             name=row.composer_name,
+            sortname=row.composer_sortname,
             musicbrainz_id=row.composer_musicbrainz_id
         )]
     if row.performer_uri is not None:
         kwargs['performers'] = [Artist(
             uri=row.performer_uri,
             name=row.performer_name,
+            sortname=row.performer_sortname,
             musicbrainz_id=row.performer_musicbrainz_id
         )]
     return Track(**kwargs)

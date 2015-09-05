@@ -17,4 +17,4 @@ def test_get_config_schema():
     assert 'timeout' in schema
     assert 'use_album_mbid_uri' in schema
     assert 'use_artist_mbid_uri' in schema
-    assert 'search_limit' in schema
+    assert 'use_artist_sortname' in schema

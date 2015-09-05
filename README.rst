@@ -46,7 +46,6 @@ but be aware that these are still subject to change::
       Albums                  local:directory?type=album
       Artists                 local:directory?type=artist
       Composers               local:directory?type=artist&role=composer
-      Folders                 local:directory:
       Genres                  local:directory?type=genre
       Performers              local:directory?type=artist&role=performer
       Release Years           local:directory?type=date&format=%25Y
@@ -65,10 +64,9 @@ but be aware that these are still subject to change::
   # multi-artist tracks [https://github.com/sampsyo/beets/issues/907]
   use_artist_mbid_uri = false
 
-  # override search limit provided by Mopidy core; set to -1 (no limit)
-  # to emulate current behavior of json library
-  # [https://github.com/mopidy/mopidy/issues/917]
-  search_limit = -1
+  # whether to use the sortname field for sorting artist browse results;
+  # set to false to sort according to displayed name only
+  use_artist_sortname = true
 
 
 Project Resources

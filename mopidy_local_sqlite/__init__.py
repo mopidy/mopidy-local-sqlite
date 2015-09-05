@@ -5,7 +5,7 @@ import os
 
 from mopidy import config, ext
 
-__version__ = '0.10.3'
+__version__ = '1.0.0'
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +26,9 @@ class Extension(ext.Extension):
         schema['timeout'] = config.Integer(optional=True, minimum=1)
         schema['use_album_mbid_uri'] = config.Boolean()
         schema['use_artist_mbid_uri'] = config.Boolean()
-        schema['search_limit'] = config.Integer(optional=True)
+        schema['use_artist_sortname'] = config.Boolean()
         # no longer used
+        schema['search_limit'] = config.Deprecated()
         schema['extract_images'] = config.Deprecated()
         schema['image_dir'] = config.Deprecated()
         schema['image_base_uri'] = config.Deprecated()
@@ -40,22 +41,9 @@ class Extension(ext.Extension):
 
     @classmethod
     def get_or_create_data_dir(cls, config):
-        if hasattr(cls, 'get_data_dir'):
-            # Mopidy >= 1.1
-            data_dir = cls().get_data_dir(config)
-            migrate_old_data_dir(config, data_dir)
-            return data_dir
-        # Mopidy < 1.1
-        try:
-            data_dir = config['local']['data_dir']
-        except KeyError:
-            from mopidy.exceptions import ExtensionError
-            raise ExtensionError('Mopidy-Local not enabled')
-        path = os.path.join(data_dir, b'sqlite')
-        if not os.path.isdir(path):
-            logger.info('Creating directory %s', path)
-            os.makedirs(path, 0o755)
-        return path
+        data_dir = cls().get_data_dir(config)
+        migrate_old_data_dir(config, data_dir)
+        return data_dir
 
 
 def migrate_old_data_dir(config, new_dir):

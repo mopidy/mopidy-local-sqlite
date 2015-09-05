@@ -2,11 +2,12 @@
 
 BEGIN EXCLUSIVE TRANSACTION;
 
-PRAGMA user_version = 5;                -- schema version
+PRAGMA user_version = 6;                -- schema version
 
 CREATE TABLE artist (
     uri             TEXT PRIMARY KEY,   -- artist URI
     name            TEXT NOT NULL,      -- artist name
+    sortname        TEXT,               -- artist name for sorting
     musicbrainz_id  TEXT                -- MusicBrainz ID
 );
 
@@ -66,6 +67,7 @@ SELECT album.uri                        AS uri,
        album.name                       AS name,
        artist.uri                       AS artist_uri,
        artist.name                      AS artist_name,
+       artist.sortname                  AS artist_sortname,
        artist.musicbrainz_id            AS artist_musicbrainz_id,
        album.num_tracks                 AS num_tracks,
        album.num_discs                  AS num_discs,
@@ -97,15 +99,19 @@ SELECT track.rowid                      AS docid,
        album.images                     AS album_images,
        artist.uri                       AS artist_uri,
        artist.name                      AS artist_name,
+       artist.sortname                  AS artist_sortname,
        artist.musicbrainz_id            AS artist_musicbrainz_id,
        composer.uri                     AS composer_uri,
        composer.name                    AS composer_name,
+       composer.sortname                AS composer_sortname,
        composer.musicbrainz_id          AS composer_musicbrainz_id,
        performer.uri                    AS performer_uri,
        performer.name                   AS performer_name,
+       performer.sortname               AS performer_sortname,
        performer.musicbrainz_id         AS performer_musicbrainz_id,
        albumartist.uri                  AS albumartist_uri,
        albumartist.name                 AS albumartist_name,
+       albumartist.sortname             AS albumartist_sortname,
        albumartist.musicbrainz_id       AS albumartist_musicbrainz_id
   FROM track
   LEFT OUTER JOIN album                 ON track.album = album.uri

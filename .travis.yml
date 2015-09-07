@@ -24,3 +24,12 @@ script:
 
 after_success:
   - "if [ $TOX_ENV == 'py27' ]; then pip install --pre coveralls; coveralls; fi"
+
+notifications:
+  irc:
+    channels:
+      - "irc.freenode.org#mopidy"
+    on_success: change
+    on_failure: change
+    use_notice: true
+    skip_join: true

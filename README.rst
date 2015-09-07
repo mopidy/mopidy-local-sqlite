@@ -80,11 +80,11 @@ Project Resources
     :target: https://pypi.python.org/pypi/Mopidy-Local-SQLite/
     :alt: Number of PyPI downloads
 
-.. image:: http://img.shields.io/travis/mopidy/mopidy-local-sqlite/master.svg?style=flat
+.. image:: http://img.shields.io/travis/mopidy/mopidy-local-sqlite/develop.svg?style=flat
     :target: https://travis-ci.org/mopidy/mopidy-local-sqlite/
     :alt: Travis CI build status
 
-.. image:: http://img.shields.io/coveralls/mopidy/mopidy-local-sqlite/master.svg?style=flat
+.. image:: http://img.shields.io/coveralls/mopidy/mopidy-local-sqlite/develop.svg?style=flat
    :target: https://coveralls.io/r/mopidy/mopidy-local-sqlite/
    :alt: Test coverage
 

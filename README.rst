@@ -76,10 +76,6 @@ Project Resources
     :target: https://pypi.python.org/pypi/Mopidy-Local-SQLite/
     :alt: Latest PyPI version
 
-.. image:: http://img.shields.io/pypi/dm/Mopidy-Local-SQLite.svg?style=flat
-    :target: https://pypi.python.org/pypi/Mopidy-Local-SQLite/
-    :alt: Number of PyPI downloads
-
 .. image:: http://img.shields.io/travis/mopidy/mopidy-local-sqlite/develop.svg?style=flat
     :target: https://travis-ci.org/mopidy/mopidy-local-sqlite/
     :alt: Travis CI build status

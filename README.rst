@@ -1,3 +1,12 @@
+WARNING
+=======
+
+As of December 2019, Mopidy-Local-SQLite is no longer maintained. Its
+functionality has been merged into the
+`Mopidy-Local <https://github.com/mopidy/mopidy-local>`_ extension.
+
+----
+
 Mopidy-Local-SQLite
 ========================================================================
 
